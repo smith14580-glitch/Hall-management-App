@@ -149,6 +149,10 @@ class Booking(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
+    customer: Mapped["Customer"] = relationship("Customer", lazy="joined", foreign_keys=[customer_id])
+    hall: Mapped["Hall"] = relationship("Hall", lazy="joined", foreign_keys=[hall_id])
+    created_by_user: Mapped["User"] = relationship("User", lazy="joined", foreign_keys=[created_by])
+
     __table_args__ = (
         CheckConstraint("slot IN ('day','night')", name="ck_bookings_slot"),
         CheckConstraint("guest_count > 0", name="ck_bookings_guest_count"),
