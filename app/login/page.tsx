@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { LogIn } from "lucide-react";
-import { ApiError } from "@/lib/api";
+import { Eye, LogIn } from "lucide-react";
+import { ApiError, isConnectionError, login as apiLogin, USE_SAMPLE_DATA } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useLanguage } from "@/lib/i18n";
 import { goldButtonClass, inputClass, labelClass } from "@/components/ui";
@@ -17,6 +17,9 @@ const schema = z.object({
 });
 
 type FormValues = z.infer<typeof schema>;
+
+const DEMO_PHONE = "03000000000";
+const DEMO_PASSWORD = "demo1234";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,17 +32,42 @@ export default function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
+  // Logged-in user opening /login goes to the dashboard (auth guard stays).
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      const stored = typeof window !== "undefined" && window.localStorage.getItem("marqueone_access_token");
+      const role = typeof window !== "undefined" ? window.localStorage.getItem("marqueone_user") : null;
+      if (stored && role) router.replace("/");
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [router]);
+
   const onSubmit = async (values: FormValues) => {
     setError("");
     try {
       const user = await login(values.phone.trim(), values.password);
       router.replace(user.role === "super_admin" ? "/" : "/attendance");
     } catch (err) {
-      if (err instanceof ApiError) {
+      if (isConnectionError(err)) {
+        setError(
+          "Backend se connect nahi ho raha — NEXT_PUBLIC_API_URL check karo. Backend (FastAPI) chal raha hai? / Cannot reach the backend — check NEXT_PUBLIC_API_URL. Is the backend (FastAPI) running?",
+        );
+      } else if (err instanceof ApiError) {
         setError(err.message);
       } else {
         setError("Login nahi ho saka — dobara try karo.");
       }
+    }
+  };
+
+  // Sample mode only: open the dashboard with sample data — no login at all.
+  const openDemo = async () => {
+    setError("");
+    try {
+      await apiLogin(DEMO_PHONE, DEMO_PASSWORD);
+      router.replace("/");
+    } catch {
+      setError("Demo mode OFF hai — demo dekhne ke liye NEXT_PUBLIC_USE_SAMPLE_DATA=true set karo.");
     }
   };
 
@@ -95,6 +123,24 @@ export default function LoginPage() {
             {isSubmitting ? t("loading") : t("login")}
           </button>
         </form>
+
+        {USE_SAMPLE_DATA && (
+          <button
+            type="button"
+            onClick={openDemo}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-stone-line bg-offwhite px-3 py-2.5 text-sm font-semibold text-charcoal hover:bg-stone-100"
+          >
+            <Eye className="h-4 w-4" />
+            Demo dekhein — bina login ke
+          </button>
+        )}
+
+        {USE_SAMPLE_DATA && (
+          <p className="mt-4 rounded-lg bg-gold-light px-3 py-2 text-xs leading-relaxed text-gold-dark" role="note">
+            Demo login (sample mode ON): phone <strong>{DEMO_PHONE}</strong>, password{" "}
+            <strong>{DEMO_PASSWORD}</strong>
+          </p>
+        )}
 
         <p className="mt-6 text-center text-xs leading-relaxed text-ink/50">
           Manager ya staff — apne phone number aur password se login karo.

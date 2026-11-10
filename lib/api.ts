@@ -216,14 +216,23 @@ export interface LoginResponse {
 
 export async function login(phone: string, password: string): Promise<LoginResponse> {
   if (USE_SAMPLE_DATA) {
-    const role = phone.includes("0301") ? "staff" : "super_admin";
-    const user: User = {
-      id: "user-1",
-      full_name: role === "super_admin" ? "Manager (Sample)" : "Staff (Sample)",
-      phone,
-      role: role as User["role"],
-    };
-    return sample({ access_token: "sample-access", refresh_token: "sample-refresh", token_type: "bearer", user });
+    // Demo login — NO API call. Fixed demo credentials documented in README
+    // and on the login page. Anything else is rejected so nobody mistakes
+    // sample mode for a real login.
+    if (phone.trim() === "03000000000" && password === "demo1234") {
+      const user: User = {
+        id: "demo-manager",
+        full_name: "Manager (Demo)",
+        phone: "03000000000",
+        role: "super_admin",
+      };
+      return sample({ access_token: "sample-access", refresh_token: "sample-refresh", token_type: "bearer", user });
+    }
+    throw new ApiError(
+      401,
+      "INVALID_CREDENTIALS",
+      "Demo mode ON hai — demo login: phone 03000000000, password demo1234 / Demo mode is ON — demo login: phone 03000000000, password demo1234",
+    );
   }
   return apiFetch<LoginResponse>("/auth/login", {
     method: "POST",

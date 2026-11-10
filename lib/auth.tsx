@@ -6,7 +6,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { ApiError, clearSession, fetchMe, getStoredUser, login as apiLogin, saveSession } from "./api";
+import { ApiError, clearSession, fetchMe, getStoredUser, login as apiLogin, saveSession, USE_SAMPLE_DATA } from "./api";
 import type { User } from "./types";
 
 interface AuthContextValue {
@@ -37,6 +37,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const stored = getStoredUser();
     if (!stored) return;
+    // Sample mode: there is no backend to verify against — the stored
+    // demo user is trusted as-is (demo login never makes an API call).
+    if (USE_SAMPLE_DATA) {
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     fetchMe()
       .then((me) => {

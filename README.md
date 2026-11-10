@@ -1,8 +1,8 @@
 # MARQUE ONE — Frontend (Next.js)
 
 The real frontend for the MARQUE ONE Marriage Hall Management System.
-This replaces the broken Claude Code scaffold whose home page was still the
-default Next.js "To get started, edit the page.tsx" template.
+This replaces the old create-next-app scaffold whose home page was still the
+default Next.js starter template.
 
 Built from `../ARCHITECTURE.md` (Phase 1). Frontend only — no backend code
 here. All data comes from the FastAPI backend over REST.
@@ -29,9 +29,17 @@ Copy `.env.local.example` to `.env.local` and fill in real values.
 
 | Variable | Meaning |
 |---|---|
-| `NEXT_PUBLIC_API_URL` | FastAPI backend base URL, no trailing slash. Local: `http://localhost:8000`. Production: the Render URL, e.g. `https://marque-one-api.onrender.com` |
+| `NEXT_PUBLIC_API_URL` | FastAPI backend base URL, no trailing slash. Local: `http://localhost:8000`. Production: the backend's public URL, e.g. `https://hall-management-app-backend.vercel.app` |
 | `NEXT_PUBLIC_APP_NAME` | `MARQUE ONE` |
 | `NEXT_PUBLIC_USE_SAMPLE_DATA` | `false` (default). Set to `true` ONLY to preview the UI without a backend — every page then shows a visible "SAMPLE DATA — demo only" banner. Never `true` in production. |
+
+## Demo mode (sample data)
+
+When `NEXT_PUBLIC_USE_SAMPLE_DATA=true`, login works **without any backend**:
+
+- **Demo login: phone `03000000000`, password `demo1234`** (shown on the login page too).
+- A "Demo dekhein — bina login ke" button on the login page opens the dashboard directly.
+- Every page shows a "SAMPLE DATA — demo only" banner; nothing is real data.
 
 ## Replacing the broken scaffold in the user's repo
 
@@ -52,11 +60,20 @@ create-next-app template. To replace it:
 
 ## Backend note (important)
 
-This frontend only needs the API URL. **The FastAPI backend is NOT
-Vercel-native** — Vercel does not serve FastAPI `/docs` or the API. Per
-`ARCHITECTURE.md` §9 the backend belongs on **Render** (Railway is the
-alternative). Deploying the backend to Vercel will not work without a
-serverless adapter, and that is out of scope for this frontend.
+This frontend only needs the API URL. **FastAPI is not Vercel-native**, but
+the backend repo (`Hall-management-App-Backend`) now ships a **Mangum
+serverless adapter** (`api/index.py` + `vercel.json` rewrites), so it CAN be
+deployed on Vercel. Render (per ARCHITECTURE.md §9) remains the recommended
+long-term host — Vercel Python functions have cold starts and 60s limits.
+
+- On Vercel: set env vars `DATABASE_URL` (Neon pooled), `JWT_SECRET_KEY`,
+  `JWT_REFRESH_SECRET_KEY`, `CORS_ORIGINS` (must include the frontend
+  origin `https://hall-management-app.vercel.app`), `FIRST_ADMIN_*`.
+- Run Alembic migrations + seed from your PC against Neon (Vercel cannot
+  run them).
+- Verify: `/docs` shows Swagger UI with all endpoints, `/openapi.json`
+  returns 200, `POST /api/v1/auth/login` works with the seeded manager.
+- Then set `NEXT_PUBLIC_API_URL` here to the backend URL and redeploy.
 
 ## Pages
 
