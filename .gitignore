@@ -1,14 +1,24 @@
+# secrets
 .env
 .env.local
+.env*.local
+
+# python (legacy)
 .venv/
 venv/
 __pycache__/
 *.pyc
+backend/
+
+# node / next
 node_modules/
 .next/
 out/
 *.log
+.vercel
+*.tsbuildinfo
+
+# misc
 .DS_Store
 .idea/
 .vscode/
-alembic.ini

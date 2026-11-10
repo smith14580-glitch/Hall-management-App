@@ -1,31 +1,33 @@
-# MARQUE ONE — Marriage Hall Management System
+# MARQUE ONE — Hall Management App (Frontend)
 
-## What this folder is
+Next.js 16 + TypeScript + Tailwind + Shadcn UI frontend for the MARQUE ONE Marriage Hall Management System.
 
-This folder holds **Phase 1 only**: the technical architecture for the MARQUE ONE
-Marriage Hall Management System.
+- Backend repo: `smith14580-glitch/Hall-management-App-Backend` (FastAPI on Vercel/Render)
+- Database: PostgreSQL on Neon
 
-- `ARCHITECTURE.md` — the complete Phase 1 technical architecture document.
-  System overview, monorepo layout, full PostgreSQL schema (including the
-  booking-conflict safeguard), the complete REST API list, auth + RBAC matrix,
-  core business rules, frontend route maps, PWA + Capacitor plan, deployment
-  plan, testing plan, phase plan with exit criteria, risks + open questions,
-  and a decisions log.
-- `README.md` — this file.
+## Features
 
-## What this folder is NOT
+- Login (JWT) — manager / staff / waiter
+- Dashboard, Bookings (list/new/detail), Customers, Payments (outstanding), Tables, Employees, Attendance, Settings
+- EN / اردو language toggle with RTL support
 
-**No application code exists yet.** There is no Next.js app, no FastAPI app,
-no database, no migrations, and no APK in this folder. That is deliberate:
-the client brief says to analyse first and not rush into coding.
+## Run locally
 
-Phase 2 (Foundation) starts from `ARCHITECTURE.md` §11 — after the client
-answers the open questions in §12.
+```bash
+npm install
+cp .env.local.example .env.local   # set NEXT_PUBLIC_API_URL to your backend URL
+npm run dev
+```
 
-## Status
+## Deploy on Vercel
 
-- Phase 1: complete (2026-11-10).
-- Phase 2: not started.
-- Open questions that most block Phase 2: day price confirmation (PKR 150,000),
-  Day/Night slot times, hall capacity (guests/tables), first manager account
-  details, and Neon/Vercel account ownership. See `ARCHITECTURE.md` §12.
+- Root Directory: leave empty (repo root **is** the app)
+- Environment Variable: `NEXT_PUBLIC_API_URL` = your deployed backend URL (e.g. `https://hall-management-app-backend.vercel.app`)
+- Build command: default (`next build`)
+
+## Env vars
+
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | Backend base URL (no trailing slash), e.g. `https://xxx.vercel.app` |
+| `NEXT_PUBLIC_APP_NAME` | Display name, default `MARQUE ONE` |
