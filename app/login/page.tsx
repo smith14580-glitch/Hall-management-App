@@ -1,69 +1,106 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useTranslation } from "@/lib/i18n";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { LogIn } from "lucide-react";
+import { ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { useLanguage } from "@/lib/i18n";
+import { goldButtonClass, inputClass, labelClass } from "@/components/ui";
+
+const schema = z.object({
+  phone: z.string().min(10, "Phone number likhna zaroori hai (kam az kam 10 digits)."),
+  password: z.string().min(1, "Password likhna zaroori hai."),
+});
+
+type FormValues = z.infer<typeof schema>;
 
 export default function LoginPage() {
-  const { t } = useTranslation();
   const router = useRouter();
-  const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
+  const { login } = useAuth();
+  const { t } = useLanguage();
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
+  const onSubmit = async (values: FormValues) => {
     setError("");
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/auth/login`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone, password }),
-        },
-      );
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || t("login_failed"));
-      localStorage.setItem("access_token", json.data?.access_token ?? json.access_token);
-      if (json.data?.refresh_token ?? json.refresh_token) {
-        localStorage.setItem("refresh_token", json.data?.refresh_token ?? json.refresh_token);
-      }
-      router.push("/dashboard");
+      const user = await login(values.phone.trim(), values.password);
+      router.replace(user.role === "super_admin" ? "/" : "/attendance");
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("login_failed"));
-    } finally {
-      setLoading(false);
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError("Login nahi ho saka — dobara try karo.");
+      }
     }
-  }
+  };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-center">{t("app_name")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <Input placeholder={t("phone")} value={phone} onChange={(e) => setPhone(e.target.value)} />
-            <Input
-              type="password"
-              placeholder={t("password")}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+    <div className="flex min-h-screen items-center justify-center bg-charcoal px-4 py-10">
+      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
+        <div className="text-center">
+          <p className="font-display text-3xl font-bold text-charcoal">
+            MARQUE <span className="text-gold">ONE</span>
+          </p>
+          <p className="mt-2 text-sm text-ink/60">Marriage Hall Management System</p>
+        </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5" noValidate>
+          <div>
+            <label htmlFor="phone" className={labelClass}>
+              {t("phone")} Number
+            </label>
+            <input
+              id="phone"
+              type="tel"
+              autoComplete="tel"
+              placeholder="03xx-xxxxxxx"
+              className={inputClass}
+              {...register("phone")}
             />
-            {error && <p className="text-sm text-red-500">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? t("signing_in") : t("sign_in")}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+            {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone.message}</p>}
+          </div>
+
+          <div>
+            <label htmlFor="password" className={labelClass}>
+              Password
+            </label>
+            <input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              className={inputClass}
+              {...register("password")}
+            />
+            {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>}
+          </div>
+
+          {error && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+              {error}
+            </p>
+          )}
+
+          <button type="submit" disabled={isSubmitting} className={`${goldButtonClass} w-full`}>
+            <LogIn className="h-4 w-4" />
+            {isSubmitting ? t("loading") : t("login")}
+          </button>
+        </form>
+
+        <p className="mt-6 text-center text-xs leading-relaxed text-ink/50">
+          Manager ya staff — apne phone number aur password se login karo.
+          Account manager banata hai; yahan koi self-registration nahi hai.
+        </p>
+      </div>
     </div>
   );
 }

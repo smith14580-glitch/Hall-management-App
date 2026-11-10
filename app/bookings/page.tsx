@@ -1,114 +1,155 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { apiRequest } from "@/lib/api";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-
-const STATUS_BADGE: Record<string, string> = {
-  pending: "badge-outline",
-  confirmed: "badge-primary",
-  cancelled: "badge-destructive",
-  completed: "badge-secondary",
-};
+import { Plus, Search } from "lucide-react";
+import { fetchBookings } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
+import { formatDate, formatPKR } from "@/lib/format";
+import type { Booking } from "@/lib/types";
+import {
+  Badge,
+  bookingStatusTone,
+  ConnectionError,
+  EmptyState,
+  goldButtonClass,
+  inputClass,
+  LoadingState,
+  PageHeader,
+  paymentStatusTone,
+} from "@/components/ui";
 
 export default function BookingsPage() {
-  const [items, setItems] = useState<any[]>([]);
+  const { t } = useLanguage();
+  const [rows, setRows] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [paymentStatus, setPaymentStatus] = useState("");
+  const [slot, setSlot] = useState("");
+  const [date, setDate] = useState("");
 
-  useEffect(() => {
-    load();
-  }, [search, status]);
-
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const data = await apiRequest<any>("/bookings", {
-        query: { search, status },
+      const data = await fetchBookings({
+        search: search || undefined,
+        status: status || undefined,
+        payment_status: paymentStatus || undefined,
+        slot: slot || undefined,
+        event_date: date || undefined,
       });
-      setItems(data.items || []);
-    } catch (e) {
-      console.error(e);
+      setRows(data);
+    } catch (err) {
+      setError(err);
     } finally {
       setLoading(false);
     }
-  }
+  }, [search, status, paymentStatus, slot, date]);
 
-  if (loading) return <div className="p-6">Loading...</div>;
+  useEffect(() => {
+    const timer = setTimeout(load, 300);
+    return () => clearTimeout(timer);
+  }, [load]);
 
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-semibold">Bookings</h1>
-          <Link href="/bookings/new">
-            <Button>New Booking</Button>
+    <div>
+      <PageHeader
+        title={t("bookings")}
+        subtitle="Search by customer name, phone, booking ID, date or status."
+        actions={
+          <Link href="/bookings/new" className={goldButtonClass}>
+            <Plus className="h-4 w-4" /> {t("newBooking")}
           </Link>
+        }
+      />
+
+      <div className="mb-5 grid gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-stone-line sm:grid-cols-2 lg:grid-cols-5">
+        <div className="relative lg:col-span-2">
+          <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Name, phone, booking ID…"
+            className={`${inputClass} ps-9`}
+            aria-label={t("search")}
+          />
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Input placeholder="Search name/phone/code" value={search} onChange={(e) => setSearch(e.target.value)} />
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="border border-input bg-background px-2 py-1.5 rounded-md text-sm"
-          >
-            <option value="">All status</option>
-            <option value="pending">Pending</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="cancelled">Cancelled</option>
-            <option value="completed">Completed</option>
+        <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputClass} aria-label={t("status")}>
+          <option value="">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="completed">Completed</option>
+        </select>
+        <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} className={inputClass} aria-label={t("paymentStatus")}>
+          <option value="">All payments</option>
+          <option value="unpaid">Unpaid</option>
+          <option value="partially_paid">Partially Paid</option>
+          <option value="fully_paid">Fully Paid</option>
+        </select>
+        <div className="flex gap-2">
+          <select value={slot} onChange={(e) => setSlot(e.target.value)} className={inputClass} aria-label={t("slot")}>
+            <option value="">Day + Night</option>
+            <option value="day">Day</option>
+            <option value="night">Night</option>
           </select>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} aria-label={t("eventDate")} />
         </div>
       </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Booking Code</TableHead>
-            <TableHead>Customer</TableHead>
-            <TableHead>Event</TableHead>
-            <TableHead>Date / Slot</TableHead>
-            <TableHead>Guests</TableHead>
-            <TableHead>Total</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Action</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {loading ? (
-            <TableRow>
-              <TableCell colSpan={8} className="text-center">Loading...</TableCell>
-            </TableRow>
-          ) : items.length ? (
-            items.map((b) => (
-              <TableRow key={b.id}>
-                <TableCell className="font-mono">{b.booking_code}</TableCell>
-                <TableCell>{b.customer_id}</TableCell>
-                <TableCell>{b.event_type}</TableCell>
-                <TableCell>{b.event_date} · {b.slot}</TableCell>
-                <TableCell>{b.guest_count}</TableCell>
-                <TableCell>PKR {Number(b.total_price).toLocaleString()}</TableCell>
-                <TableCell>
-                  <Badge className={STATUS_BADGE[b.status] || "badge-outline"}>{b.status}</Badge>
-                </TableCell>
-                <TableCell>
-                  <Link href={`/bookings/${b.id}`} className="text-sm underline underline-offset-4">
-                    View
-                  </Link>
-                </TableCell>
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={8} className="text-center">No bookings found</TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+
+      {error ? (
+        <ConnectionError error={error} onRetry={load} />
+      ) : loading ? (
+        <LoadingState />
+      ) : rows.length === 0 ? (
+        <EmptyState message="No bookings match these filters. Try a different search." />
+      ) : (
+        <div className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-stone-line">
+          <table className="w-full min-w-200 text-left text-sm">
+            <thead>
+              <tr className="border-b border-stone-line text-xs uppercase tracking-wide text-ink/50">
+                <th className="px-5 py-3">Booking</th>
+                <th className="px-5 py-3">{t("customer")}</th>
+                <th className="px-5 py-3">{t("eventType")}</th>
+                <th className="px-5 py-3">{t("eventDate")}</th>
+                <th className="px-5 py-3">{t("slot")}</th>
+                <th className="px-5 py-3">{t("total")}</th>
+                <th className="px-5 py-3">{t("balance")}</th>
+                <th className="px-5 py-3">{t("paymentStatus")}</th>
+                <th className="px-5 py-3">{t("status")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((b) => (
+                <tr key={b.id} className="border-b border-stone-line last:border-0 hover:bg-offwhite">
+                  <td className="px-5 py-3 font-semibold text-charcoal">
+                    <Link href={`/bookings/${b.id}`} className="hover:underline">{b.booking_code}</Link>
+                  </td>
+                  <td className="px-5 py-3">
+                    <p className="font-medium text-charcoal">{b.customer_name || "—"}</p>
+                    <p className="text-xs text-ink/60">{b.customer_phone || ""}</p>
+                  </td>
+                  <td className="px-5 py-3">{b.event_type}</td>
+                  <td className="px-5 py-3">{formatDate(b.event_date)}</td>
+                  <td className="px-5 py-3 capitalize">{b.slot}</td>
+                  <td className="px-5 py-3">{formatPKR(b.total_price)}</td>
+                  <td className="px-5 py-3 font-semibold text-red-700">{formatPKR(b.balance_amount)}</td>
+                  <td className="px-5 py-3">
+                    <Badge tone={paymentStatusTone(b.payment_status)}>{b.payment_status.replace("_", " ")}</Badge>
+                  </td>
+                  <td className="px-5 py-3">
+                    <Badge tone={bookingStatusTone(b.status)}>{b.status}</Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

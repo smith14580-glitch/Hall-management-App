@@ -1,95 +1,196 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { apiRequest } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import React, { useCallback, useEffect, useState } from "react";
+import { Plus, Search } from "lucide-react";
+import { ApiError, createEmployee, deactivateEmployee, fetchEmployees } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
+import { formatDate } from "@/lib/format";
+import type { Employee } from "@/lib/types";
+import {
+  Badge,
+  ConnectionError,
+  EmptyState,
+  goldButtonClass,
+  inputClass,
+  labelClass,
+  LoadingState,
+  Modal,
+  PageHeader,
+  secondaryButtonClass,
+} from "@/components/ui";
+
+const JOB_ROLES = ["manager", "reception", "waiter", "cook", "cleaner", "security", "other"];
 
 export default function EmployeesPage() {
-  const [items, setItems] = useState<any[]>([]);
+  const { t } = useLanguage();
+  const [rows, setRows] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ full_name: "", phone: "", role: "waiter" });
-  const [error, setError] = useState("");
-  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [search, setSearch] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [jobRole, setJobRole] = useState("waiter");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setRows(await fetchEmployees(search));
+    } catch (err) {
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [search]);
 
   useEffect(() => {
-    load();
-  }, []);
+    const timer = setTimeout(load, 300);
+    return () => clearTimeout(timer);
+  }, [load]);
 
-  async function load() {
-    setLoading(true);
+  const onAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError("");
+    if (fullName.trim().length < 2) {
+      setFormError("Poora naam likho.");
+      return;
+    }
+    if (phone.trim().length < 10) {
+      setFormError("Phone number kam az kam 10 digits ka ho.");
+      return;
+    }
+    setBusy(true);
     try {
-      const data = await apiRequest<any>("/employees");
-      setItems(data.items || data || []);
-    } catch (e) { console.error(e); } finally { setLoading(false); }
-  }
+      await createEmployee({ full_name: fullName.trim(), phone: phone.trim(), role: jobRole });
+      setFullName("");
+      setPhone("");
+      setJobRole("waiter");
+      setShowForm(false);
+      await load();
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : "Employee add nahi hua.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
-  async function createEmployee() {
-    setError("");
+  const onDeactivate = async (row: Employee) => {
+    if (!window.confirm(`${row.full_name} ko deactivate karna hai? Unka login bhi band ho jayega.`)) return;
     try {
-      await apiRequest("/employees", { method: "POST", body: form });
-      setOpen(false);
-      setForm({ full_name: "", phone: "", role: "waiter" });
-      load();
-    } catch (e: any) { setError(e.message); }
-  }
+      await deactivateEmployee(row.id);
+      await load();
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : "Deactivate nahi ho saka.");
+    }
+  };
 
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center gap-2">
-        <h1 className="text-xl font-semibold">Employees</h1>
-        <Button onClick={() => setOpen(true)}>Add Employee</Button>
-      </div>
-      {error && <p className="text-sm text-red-500">{error}</p>}
-      <div className="border rounded p-3">
-        {loading ? (
-          <div>Loading...</div>
-        ) : items.length ? (
-          <ul className="space-y-2">
-            {items.map((e) => (
-              <li key={e.id} className="flex justify-between items-center p-2 border-b">
-                <div>
-                  <div className="font-medium">{e.full_name}</div>
-                  <div className="text-xs text-muted-foreground">{e.phone} · {e.role}</div>
-                </div>
-                <span className="text-xs font-mono">{e.employee_code}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-muted-foreground text-sm">No employees</p>
-        )}
+    <div>
+      <PageHeader
+        title={t("employees")}
+        subtitle="Employees, unki job roles aur account status. Login account manager banata hai."
+        actions={
+          <button type="button" onClick={() => setShowForm(true)} className={goldButtonClass}>
+            <Plus className="h-4 w-4" /> Add Employee
+          </button>
+        }
+      />
+
+      <div className="relative mb-5 max-w-md">
+        <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Name ya employee code…"
+          className={`${inputClass} ps-9`}
+          aria-label={t("search")}
+        />
       </div>
 
-      <div className={`fixed inset-0 z-50 ${open ? "flex" : "hidden"} items-center justify-center bg-black/50`}>
-        <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-sm">
-          <h2 className="text-lg font-semibold mb-4">Add Employee</h2>
-          <div className="space-y-3">
-            <label className="text-sm font-medium block">Full Name</label>
-            <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
-            <label className="text-sm font-medium block">Phone</label>
-            <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-            <label className="text-sm font-medium block">Role</label>
-            <select
-              value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
-              className="border border-input bg-background px-2 py-1.5 rounded-md text-sm w-full"
-            >
-              <option value="waiter">Waiter</option>
-              <option value="reception">Reception</option>
-              <option value="manager">Manager</option>
-              <option value="cook">Cook</option>
-              <option value="cleaner">Cleaner</option>
-              <option value="security">Security</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={createEmployee}>Save</Button>
-          </div>
+      {formError && (
+        <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{formError}</p>
+      )}
+
+      {error ? (
+        <ConnectionError error={error} onRetry={load} />
+      ) : loading ? (
+        <LoadingState />
+      ) : rows.length === 0 ? (
+        <EmptyState message="No employees yet — Add Employee se pehla employee banao." />
+      ) : (
+        <div className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-stone-line">
+          <table className="w-full min-w-160 text-left text-sm">
+            <thead>
+              <tr className="border-b border-stone-line text-xs uppercase tracking-wide text-ink/50">
+                <th className="px-5 py-3">Code</th>
+                <th className="px-5 py-3">{t("name")}</th>
+                <th className="px-5 py-3">{t("phone")}</th>
+                <th className="px-5 py-3">{t("role")}</th>
+                <th className="px-5 py-3">Hire Date</th>
+                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id} className="border-b border-stone-line last:border-0 hover:bg-offwhite">
+                  <td className="px-5 py-3 font-semibold text-charcoal">{row.employee_code}</td>
+                  <td className="px-5 py-3 font-semibold text-charcoal">{row.full_name}</td>
+                  <td className="px-5 py-3" dir="ltr">{row.phone}</td>
+                  <td className="px-5 py-3 capitalize">{row.role}</td>
+                  <td className="px-5 py-3">{row.hire_date ? formatDate(row.hire_date) : "—"}</td>
+                  <td className="px-5 py-3">
+                    <Badge tone={row.is_active ? "green" : "grey"}>{row.is_active ? t("active") : t("inactive")}</Badge>
+                  </td>
+                  <td className="px-5 py-3">
+                    {row.is_active && (
+                      <button type="button" onClick={() => onDeactivate(row)} className={secondaryButtonClass}>
+                        Deactivate
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      </div>
+      )}
+
+      {showForm && (
+        <Modal title="Add Employee" onClose={() => setShowForm(false)}>
+          <form onSubmit={onAdd} className="space-y-4">
+            <div>
+              <label htmlFor="emp_name" className={labelClass}>Full Name *</label>
+              <input id="emp_name" value={fullName} onChange={(e) => setFullName(e.target.value)} className={inputClass} />
+            </div>
+            <div>
+              <label htmlFor="emp_phone" className={labelClass}>Phone *</label>
+              <input id="emp_phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="03xx-xxxxxxx" className={inputClass} />
+            </div>
+            <div>
+              <label htmlFor="emp_role" className={labelClass}>Job Role *</label>
+              <select id="emp_role" value={jobRole} onChange={(e) => setJobRole(e.target.value)} className={inputClass}>
+                {JOB_ROLES.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            </div>
+            <p className="text-xs text-ink/60">
+              Employee code (EMP-0001…) backend khud banata hai. Login account alag se
+              banta hai — phone number login identifier hai.
+            </p>
+            {formError && <p className="text-sm text-red-600" role="alert">{formError}</p>}
+            <div className="flex gap-2">
+              <button type="submit" disabled={busy} className={goldButtonClass}>{busy ? "Adding…" : "Add Employee"}</button>
+              <button type="button" onClick={() => setShowForm(false)} className={secondaryButtonClass}>Cancel</button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

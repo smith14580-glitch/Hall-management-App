@@ -1,119 +1,414 @@
-import { cache } from "react";
+"use client";
 
-export const generateStaticParams = () => [{ id: "dummy" }];
+import React, { useEffect, useCallback, useState } from "react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowLeft, Receipt, Trash2 } from "lucide-react";
+import {
+  ApiError,
+  allocateTables,
+  bookingAction,
+  fetchBooking,
+  fetchBookingPayments,
+  fetchBookingTables,
+  fetchTables,
+  recordPayment,
+  voidPayment,
+} from "@/lib/api";
+import { formatDate, formatPKR, todayISO } from "@/lib/format";
+import { PAYMENT_METHODS, type Booking, type HallTable, type Payment, type TableAllocation } from "@/lib/types";
+import {
+  Badge,
+  bookingStatusTone,
+  ConnectionError,
+  dangerButtonClass,
+  EmptyState,
+  goldButtonClass,
+  inputClass,
+  labelClass,
+  LoadingState,
+  Modal,
+  PageHeader,
+  paymentStatusTone,
+  primaryButtonClass,
+  secondaryButtonClass,
+} from "@/components/ui";
+import { ReceiptModal } from "@/components/receipt";
 
-const STATUS_BADGE: Record<string, string> = {
-  pending: "bg-gray-100 text-gray-800",
-  confirmed: "bg-blue-100 text-blue-800",
-  cancelled: "bg-red-100 text-red-800",
-  completed: "bg-gray-200 text-gray-600",
-};
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
-const fetchJson = cache(async (path: string) => {
-  try {
-    const res = await fetch(`${API_URL}${path}`, {
-      headers: { "Content-Type": "application/json" },
-    });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
-  }
+const paymentSchema = z.object({
+  amount: z.coerce.number().positive("Amount 0 se zyada hona chahiye."),
+  payment_date: z.string().min(1, "Date chuno."),
+  method: z.string().min(1, "Method chuno."),
+  reference: z.string().optional(),
+  notes: z.string().optional(),
 });
 
-export default async function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const isBuild = process.env.NEXT_PHASE === "phase-production-build";
-  const booking: any = isBuild ? null : await fetchJson(`/api/v1/bookings/${id}`);
-  const payments: any = isBuild ? null : await fetchJson(`/api/v1/bookings/${id}/payments`);
-  const tables: any = isBuild ? null : await fetchJson(`/api/v1/bookings/${id}/tables`);
+type PaymentFormValues = z.infer<typeof paymentSchema>;
 
-  const items = booking?.data || booking;
-  const payList = payments?.data || payments || [];
-  const tableList = tables?.data || tables || [];
+export default function BookingDetailPage() {
+  const params = useParams<{ id: string }>();
+  const id = params.id;
+  const router = useRouter();
+  const [booking, setBooking] = useState<Booking | null>(null);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [tables, setTables] = useState<HallTable[]>([]);
+  const [allocated, setAllocated] = useState<TableAllocation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
+  const [actionError, setActionError] = useState("");
+  const [actionBusy, setActionBusy] = useState(false);
+  const [receipt, setReceipt] = useState<Payment | null>(null);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [showCancel, setShowCancel] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [selectedTables, setSelectedTables] = useState<string[]>([]);
+  const [tableBusy, setTableBusy] = useState(false);
 
-  if (!items) {
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<PaymentFormValues>({
+    resolver: zodResolver(paymentSchema),
+    defaultValues: { payment_date: todayISO(), method: "cash" },
+  });
+
+  // Data loading lives in an Effect Event: effects may call it, and it
+  // always sees the latest state without re-running the effect.
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [b, pays, tbls, alloc] = await Promise.all([
+        fetchBooking(id),
+        fetchBookingPayments(id).catch(() => [] as Payment[]),
+        fetchTables().catch(() => [] as HallTable[]),
+        fetchBookingTables(id).catch(() => [] as TableAllocation[]),
+      ]);
+      setBooking(b);
+      setPayments(pays);
+      setTables(tbls);
+      setAllocated(alloc);
+      setSelectedTables(alloc.map((a) => a.table_id));
+    } catch (err) {
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    void (async () => {
+      await load();
+    })();
+  }, [id, load]);
+
+  const doAction = async (action: "confirm" | "cancel" | "complete", body?: Record<string, unknown>) => {
+    setActionError("");
+    setActionBusy(true);
+    try {
+      const updated = await bookingAction(id, action, body);
+      setBooking(updated);
+      if (action === "cancel") setShowCancel(false);
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "Action fail ho gaya — dobara try karo.");
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const onRecordPayment = async (values: PaymentFormValues) => {
+    setActionError("");
+    try {
+      const created = await recordPayment(id, {
+        amount: values.amount,
+        payment_date: values.payment_date,
+        method: values.method,
+        reference: values.reference || undefined,
+        notes: values.notes || undefined,
+      });
+      setPayments((prev) => [created, ...prev]);
+      setShowPaymentForm(false);
+      reset({ payment_date: todayISO(), method: "cash", amount: 0, reference: "", notes: "" });
+      await load();
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "Payment save nahi hui.");
+    }
+  };
+
+  const onVoidPayment = async (paymentId: string) => {
+    const reason = window.prompt("Void karne ki wajah likho (zaroori hai):");
+    if (!reason) return;
+    try {
+      await voidPayment(paymentId, reason);
+      await load();
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "Void nahi ho saka.");
+    }
+  };
+
+  const onSaveTables = async () => {
+    setTableBusy(true);
+    setActionError("");
+    try {
+      const result = await allocateTables(id, selectedTables);
+      setAllocated(result);
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "Tables allocate nahi ho sake.");
+    } finally {
+      setTableBusy(false);
+    }
+  };
+
+  if (loading) return <LoadingState />;
+  if (error || !booking) {
     return (
-      <div className="p-6">
-        <h1 className="text-xl font-semibold">Booking</h1>
-        <p className="text-muted-foreground">Booking not found.</p>
+      <div>
+        <PageHeader title="Booking Detail" />
+        <ConnectionError error={error || new Error("Booking nahi mili.")} onRetry={() => void load()} />
+        <button type="button" onClick={() => router.push("/bookings")} className={`${secondaryButtonClass} mt-4`}>
+          <ArrowLeft className="h-4 w-4" /> Back to Bookings
+        </button>
       </div>
     );
   }
 
+  const seatedCapacity = allocated.reduce((sum, a) => {
+    const t = tables.find((x) => x.id === a.table_id);
+    return sum + (t?.capacity || a.capacity || 0);
+  }, 0);
+
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">{items.booking_code}</h1>
-          <p className="text-muted-foreground">
-            {items.event_type} · {items.event_date} · {items.slot}
+    <div>
+      <button type="button" onClick={() => router.push("/bookings")} className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-gold-dark hover:underline">
+        <ArrowLeft className="h-4 w-4" /> Back to Bookings
+      </button>
+      <PageHeader
+        title={`${booking.booking_code} — ${booking.customer_name || ""}`}
+        subtitle={`${booking.event_type} · ${formatDate(booking.event_date)} · ${booking.slot === "day" ? "Day" : "Night"}`}
+        actions={
+          <>
+            {booking.status === "pending" && (
+              <button type="button" disabled={actionBusy} onClick={() => doAction("confirm")} className={goldButtonClass}>
+                Confirm Booking
+              </button>
+            )}
+            {booking.status === "confirmed" && (
+              <button type="button" disabled={actionBusy} onClick={() => doAction("complete")} className={primaryButtonClass}>
+                Mark Completed
+              </button>
+            )}
+            {(booking.status === "pending" || booking.status === "confirmed") && (
+              <button type="button" disabled={actionBusy} onClick={() => setShowCancel(true)} className={dangerButtonClass}>
+                Cancel Booking
+              </button>
+            )}
+          </>
+        }
+      />
+
+      {actionError && (
+        <p className="mb-5 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{actionError}</p>
+      )}
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          {/* Booking summary */}
+          <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
+            <div className="flex flex-wrap gap-2">
+              <Badge tone={bookingStatusTone(booking.status)}>{booking.status}</Badge>
+              <Badge tone={paymentStatusTone(booking.payment_status)}>{booking.payment_status.replace("_", " ")}</Badge>
+              <Badge tone="gold">{booking.slot === "day" ? "Day Slot" : "Night Slot"}</Badge>
+            </div>
+            <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
+              <div><dt className="text-ink/50">Customer</dt><dd className="font-semibold text-charcoal">{booking.customer_name || "—"}</dd></div>
+              <div><dt className="text-ink/50">Phone</dt><dd className="font-semibold text-charcoal" dir="ltr">{booking.customer_phone || "—"}</dd></div>
+              <div><dt className="text-ink/50">Event Date</dt><dd className="font-semibold text-charcoal">{formatDate(booking.event_date)}</dd></div>
+              <div><dt className="text-ink/50">Guests / Tables</dt><dd className="font-semibold text-charcoal">{booking.guest_count} guests · {booking.tables_required} tables</dd></div>
+              <div><dt className="text-ink/50">Hall</dt><dd className="font-semibold text-charcoal">{booking.hall_name || "MARQUE ONE"}</dd></div>
+              <div><dt className="text-ink/50">Special Instructions</dt><dd className="font-semibold text-charcoal">{booking.special_instructions || "—"}</dd></div>
+              {booking.customer_id && (
+                <div>
+                  <dt className="text-ink/50">Customer Profile</dt>
+                  <dd><Link href={`/customers/${booking.customer_id}`} className="font-semibold text-gold-dark hover:underline">View customer →</Link></dd>
+                </div>
+              )}
+              {booking.cancelled_reason && (
+                <div><dt className="text-ink/50">Cancel Reason</dt><dd className="font-semibold text-red-700">{booking.cancelled_reason}</dd></div>
+              )}
+            </dl>
+          </div>
+
+          {/* Payments */}
+          <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-lg font-bold text-charcoal">Payments</h2>
+              {booking.status !== "cancelled" && (
+                <button type="button" onClick={() => setShowPaymentForm((v) => !v)} className={goldButtonClass}>
+                  Record Payment
+                </button>
+              )}
+            </div>
+
+            {showPaymentForm && (
+              <form onSubmit={handleSubmit(onRecordPayment)} noValidate className="mt-5 grid gap-4 rounded-xl bg-offwhite p-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="amount" className={labelClass}>Amount (PKR) *</label>
+                  <input id="amount" type="number" min={1} max={booking.balance_amount} className={inputClass} {...register("amount")} />
+                  {errors.amount && <p className="mt-1 text-xs text-red-600">{errors.amount.message}</p>}
+                  <p className="mt-1 text-xs text-ink/50">Remaining balance: {formatPKR(booking.balance_amount)}</p>
+                </div>
+                <div>
+                  <label htmlFor="payment_date" className={labelClass}>Payment Date *</label>
+                  <input id="payment_date" type="date" className={inputClass} {...register("payment_date")} />
+                  {errors.payment_date && <p className="mt-1 text-xs text-red-600">{errors.payment_date.message}</p>}
+                </div>
+                <div>
+                  <label htmlFor="method" className={labelClass}>Method *</label>
+                  <select id="method" className={inputClass} {...register("method")}>
+                    {PAYMENT_METHODS.map((m) => (
+                      <option key={m.value} value={m.value}>{m.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="reference" className={labelClass}>Reference (optional)</label>
+                  <input id="reference" className={inputClass} placeholder="Transaction / cheque no." {...register("reference")} />
+                </div>
+                <div className="sm:col-span-2 flex gap-2">
+                  <button type="submit" disabled={isSubmitting} className={goldButtonClass}>
+                    {isSubmitting ? "Saving…" : "Save Payment"}
+                  </button>
+                  <button type="button" onClick={() => setShowPaymentForm(false)} className={secondaryButtonClass}>Cancel</button>
+                </div>
+              </form>
+            )}
+
+            <div className="mt-5 overflow-x-auto">
+              {payments.length === 0 ? (
+                <EmptyState message="No payments recorded yet for this booking." />
+              ) : (
+                <table className="w-full min-w-130 text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-stone-line text-xs uppercase tracking-wide text-ink/50">
+                      <th className="py-2 pe-3">Receipt</th>
+                      <th className="py-2 pe-3">Date</th>
+                      <th className="py-2 pe-3">Method</th>
+                      <th className="py-2 pe-3">Amount</th>
+                      <th className="py-2">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payments.map((p) => (
+                      <tr key={p.id} className={p.is_voided ? "text-ink/40 line-through" : ""}>
+                        <td className="py-2 pe-3 font-semibold">{p.receipt_number}</td>
+                        <td className="py-2 pe-3">{formatDate(p.payment_date)}</td>
+                        <td className="py-2 pe-3 capitalize">{p.method.replace("_", " ")}</td>
+                        <td className="py-2 pe-3 font-semibold">{formatPKR(p.amount)}</td>
+                        <td className="py-2">
+                          <div className="flex gap-2">
+                            <button type="button" onClick={() => setReceipt(p)} className="inline-flex items-center gap-1 rounded-lg border border-stone-line px-2.5 py-1.5 text-xs font-semibold hover:bg-offwhite" aria-label={`Receipt ${p.receipt_number}`}>
+                              <Receipt className="h-3.5 w-3.5" /> Receipt
+                            </button>
+                            {!p.is_voided && (
+                              <button type="button" onClick={() => onVoidPayment(p.id)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50" aria-label={`Void ${p.receipt_number}`}>
+                                <Trash2 className="h-3.5 w-3.5" /> Void
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+
+          {/* Tables */}
+          <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
+            <h2 className="font-display text-lg font-bold text-charcoal">Table Allocation</h2>
+            <p className="mt-1 text-sm text-ink/60">
+              Required: {booking.tables_required} tables · Seated capacity: {seatedCapacity} / {booking.guest_count} guests
+            </p>
+            {tables.length === 0 ? (
+              <p className="mt-4 text-sm text-ink/60">No tables defined yet — add tables from the Tables page first.</p>
+            ) : (
+              <>
+                <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {tables.filter((t) => t.is_active).map((t) => {
+                    const checked = selectedTables.includes(t.id);
+                    return (
+                      <label key={t.id} className={`flex cursor-pointer flex-col items-center rounded-lg border px-2 py-3 text-sm ${checked ? "border-gold bg-gold-light font-semibold text-gold-dark" : "border-stone-line bg-white text-charcoal"}`}>
+                        <input type="checkbox" className="sr-only" checked={checked} onChange={() => setSelectedTables((prev) => (checked ? prev.filter((x) => x !== t.id) : [...prev, t.id]))} />
+                        {t.table_number}
+                        <span className="text-xs text-ink/50">{t.capacity} seats</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <button type="button" onClick={onSaveTables} disabled={tableBusy} className={`${goldButtonClass} mt-4`}>
+                  {tableBusy ? "Saving…" : `Save Allocation (${selectedTables.length} tables)`}
+                </button>
+                {seatedCapacity < booking.guest_count && selectedTables.length > 0 && (
+                  <p className="mt-2 text-sm text-amber-700">
+                    Warning: selected tables seat {seatedCapacity} guests, but the booking needs {booking.guest_count}. Add more tables.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        <aside className="h-fit rounded-xl bg-charcoal p-6 text-white shadow-sm lg:sticky lg:top-24">
+          <h2 className="font-display text-lg font-bold">Payment Summary</h2>
+          <dl className="mt-5 space-y-3 text-sm">
+            <div className="flex justify-between border-b border-white/10 pb-3">
+              <dt className="text-white/70">Total Price</dt>
+              <dd className="font-display text-lg font-bold">{formatPKR(booking.total_price)}</dd>
+            </div>
+            <div className="flex justify-between border-b border-white/10 pb-3">
+              <dt className="text-white/70">Agreed Advance</dt>
+              <dd className="font-semibold">{formatPKR(booking.advance_amount)}</dd>
+            </div>
+            <div className="flex justify-between border-b border-white/10 pb-3">
+              <dt className="text-white/70">Amount Paid</dt>
+              <dd className="font-semibold text-emerald-300">{formatPKR(booking.amount_paid)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-white/70">Balance Due</dt>
+              <dd className="font-display text-lg font-bold text-gold">{formatPKR(booking.balance_amount)}</dd>
+            </div>
+          </dl>
+          <p className="mt-5 text-xs leading-relaxed text-white/50">
+            Payment status is derived from recorded payments only — a booking is
+            never marked Fully Paid by hand.
           </p>
-        </div>
-        <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${STATUS_BADGE[items.status] || "bg-gray-100 text-gray-800"}`}>
-          {items.status}
-        </span>
+        </aside>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Total</label>
-          <p className="font-mono">PKR {Number(items.total_price || 0).toLocaleString()}</p>
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Advance</label>
-          <p className="font-mono">PKR {Number(items.advance_amount || 0).toLocaleString()}</p>
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Balance</label>
-          <p className="font-mono text-red-600">PKR {Number(items.balance_amount || 0).toLocaleString()}</p>
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Payment Status</label>
-          <p>{items.payment_status}</p>
-        </div>
-      </div>
+      {receipt && <ReceiptModal payment={receipt} booking={booking} onClose={() => setReceipt(null)} />}
 
-      <div className="space-y-4">
-        <h2 className="text-sm font-semibold">Payments</h2>
-        <div className="border rounded p-3">
-          {payList.length ? (
-            <ul className="space-y-2 text-sm">
-              {payList.map((p: any) => (
-                <li key={p.id} className="flex justify-between">
-                  <span>{p.receipt_number} · {p.amount} · {p.method}</span>
-                  <span className="text-xs text-muted-foreground">{p.payment_date}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground text-sm">No payments yet</p>
-          )}
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <h2 className="text-sm font-semibold">Tables</h2>
-        <div className="border rounded p-3">
-          {tableList.length ? (
-            <ul className="space-y-1 text-sm">
-              {tableList.map((t: any) => (
-                <li key={t.id} className="flex justify-between">
-                  <span>{t.table_number} · {t.capacity} seats</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground text-sm">No tables allocated</p>
-          )}
-        </div>
-      </div>
-
-      <a href="/bookings" className="text-sm underline underline-offset-4">
-        Back to list
-      </a>
+      {showCancel && (
+        <Modal title="Cancel Booking" onClose={() => setShowCancel(false)}>
+          <p className="text-sm text-ink/70">
+            Cancelling frees this date and slot for a new booking. Recorded payments stay on the
+            booking — no refunds are processed in v1. A reason is required.
+          </p>
+          <label htmlFor="cancel_reason" className={`${labelClass} mt-4`}>Reason *</label>
+          <textarea id="cancel_reason" rows={3} className={inputClass} value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} placeholder="e.g. Customer requested cancellation" />
+          <div className="mt-4 flex gap-2">
+            <button type="button" disabled={actionBusy || cancelReason.trim().length < 3} onClick={() => doAction("cancel", { reason: cancelReason.trim() })} className={dangerButtonClass}>
+              Confirm Cancellation
+            </button>
+            <button type="button" onClick={() => setShowCancel(false)} className={secondaryButtonClass}>Back</button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

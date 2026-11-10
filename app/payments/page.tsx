@@ -1,53 +1,160 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { apiRequest } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import React, { useEffect, useCallback, useState } from "react";
 import Link from "next/link";
+import { Receipt } from "lucide-react";
+import { fetchAllPayments, fetchOutstanding } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
+import { formatDate, formatPKR } from "@/lib/format";
+import type { Booking, Payment } from "@/lib/types";
+import {
+  Badge,
+  ConnectionError,
+  EmptyState,
+  LoadingState,
+  PageHeader,
+  StatCard,
+} from "@/components/ui";
+import { ReceiptModal } from "@/components/receipt";
 
 export default function PaymentsPage() {
-  const [items, setItems] = useState<any[]>([]);
+  const { t } = useLanguage();
+  const [outstanding, setOutstanding] = useState<Booking[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
+  const [receipt, setReceipt] = useState<Payment | null>(null);
 
-  useEffect(() => {
-    load();
+  // Data loading lives in an Effect Event: effects may call it, and it
+  // always sees the latest state without re-running the effect.
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [o, p] = await Promise.all([fetchOutstanding(), fetchAllPayments()]);
+      setOutstanding(o);
+      setPayments(p);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  async function load() {
-    setLoading(true);
-    try {
-      const data = await apiRequest<any>("/bookings/payments/outstanding");
-      setItems(data.items || data || []);
-    } catch (e) { console.error(e); } finally { setLoading(false); }
-  }
+  useEffect(() => {
+    void (async () => {
+      await load();
+    })();
+  }, [load]);
 
-  if (loading) return <div className="p-6">Loading...</div>;
+  const totalOutstanding = outstanding.reduce((s, b) => s + b.balance_amount, 0);
+  const totalReceived = payments.filter((p) => !p.is_voided).reduce((s, p) => s + p.amount, 0);
 
   return (
-    <div className="p-6 space-y-4">
-      <h1 className="text-xl font-semibold">Outstanding Balances</h1>
-      <Link href="/bookings" className="text-sm underline underline-offset-4">← Back to bookings</Link>
-      <div className="border rounded p-3">
-        {items.length ? (
-          <ul className="space-y-2">
-            {items.map((b) => (
-              <li key={b.id} className="flex justify-between items-center p-2 border-b">
-                <div>
-                  <div className="font-medium">{b.booking_code}</div>
-                  <div className="text-xs text-muted-foreground">{b.event_type} · {b.event_date}</div>
-                </div>
-                <div className="text-right">
-                  <div className="font-mono text-red-600">PKR {Number(b.balance_amount).toLocaleString()}</div>
-                  <div className="text-xs text-muted-foreground">{b.payment_status}</div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-muted-foreground text-sm">No outstanding balances</p>
-        )}
-      </div>
+    <div>
+      <PageHeader title={t("payments")} subtitle="Har payment alag record hoti hai. Receipt dobara print ho sakti hai." />
+
+      {error ? (
+        <ConnectionError error={error} onRetry={() => void load()} />
+      ) : loading ? (
+        <LoadingState />
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <StatCard label="Outstanding Balance" value={formatPKR(totalOutstanding)} sub={`${outstanding.length} bookings with balance due`} />
+            <StatCard label="Total Received" value={formatPKR(totalReceived)} sub={`${payments.filter((p) => !p.is_voided).length} payments recorded`} />
+            <StatCard label="Voided Payments" value={String(payments.filter((p) => p.is_voided).length)} sub="Voided receipts stay in history" />
+          </div>
+
+          <div className="mt-6 rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
+            <h2 className="font-display text-lg font-bold text-charcoal">Outstanding Balances</h2>
+            {outstanding.length === 0 ? (
+              <EmptyState message="Koi outstanding balance nahi hai — sab clear hai." />
+            ) : (
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full min-w-150 text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-stone-line text-xs uppercase tracking-wide text-ink/50">
+                      <th className="py-2 pe-3">Booking</th>
+                      <th className="py-2 pe-3">Customer</th>
+                      <th className="py-2 pe-3">Event Date</th>
+                      <th className="py-2 pe-3">Total</th>
+                      <th className="py-2 pe-3">Paid</th>
+                      <th className="py-2 pe-3">Balance</th>
+                      <th className="py-2">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {outstanding.map((b) => (
+                      <tr key={b.id} className="border-b border-stone-line last:border-0">
+                        <td className="py-2 pe-3 font-semibold">
+                          <Link href={`/bookings/${b.id}`} className="text-gold-dark hover:underline">{b.booking_code}</Link>
+                        </td>
+                        <td className="py-2 pe-3">{b.customer_name || "—"}</td>
+                        <td className="py-2 pe-3">{formatDate(b.event_date)}</td>
+                        <td className="py-2 pe-3">{formatPKR(b.total_price)}</td>
+                        <td className="py-2 pe-3">{formatPKR(b.amount_paid)}</td>
+                        <td className="py-2 pe-3 font-bold text-red-700">{formatPKR(b.balance_amount)}</td>
+                        <td className="py-2">
+                          <Link href={`/bookings/${b.id}`} className="font-semibold text-gold-dark hover:underline">Record Payment →</Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6 rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
+            <h2 className="font-display text-lg font-bold text-charcoal">Payment History</h2>
+            {payments.length === 0 ? (
+              <EmptyState message="No payments recorded yet." />
+            ) : (
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full min-w-150 text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-stone-line text-xs uppercase tracking-wide text-ink/50">
+                      <th className="py-2 pe-3">Receipt</th>
+                      <th className="py-2 pe-3">Booking</th>
+                      <th className="py-2 pe-3">Customer</th>
+                      <th className="py-2 pe-3">Date</th>
+                      <th className="py-2 pe-3">Method</th>
+                      <th className="py-2 pe-3">Amount</th>
+                      <th className="py-2">Receipt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payments.map((p) => (
+                      <tr key={p.id} className={`border-b border-stone-line last:border-0 ${p.is_voided ? "text-ink/40" : ""}`}>
+                        <td className="py-2 pe-3 font-semibold">{p.receipt_number}</td>
+                        <td className="py-2 pe-3">
+                          {p.booking_id ? <Link href={`/bookings/${p.booking_id}`} className="text-gold-dark hover:underline">{p.booking_code || p.booking_id.slice(0, 8)}</Link> : "—"}
+                        </td>
+                        <td className="py-2 pe-3">{p.customer_name || "—"}</td>
+                        <td className="py-2 pe-3">{formatDate(p.payment_date)}</td>
+                        <td className="py-2 pe-3 capitalize">{p.method.replace("_", " ")}</td>
+                        <td className="py-2 pe-3 font-semibold">{formatPKR(p.amount)}</td>
+                        <td className="py-2">
+                          {p.is_voided ? (
+                            <Badge tone="red">Voided</Badge>
+                          ) : (
+                            <button type="button" onClick={() => setReceipt(p)} className="inline-flex items-center gap-1 rounded-lg border border-stone-line px-2.5 py-1.5 text-xs font-semibold hover:bg-offwhite">
+                              <Receipt className="h-3.5 w-3.5" /> View
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {receipt && <ReceiptModal payment={receipt} onClose={() => setReceipt(null)} />}
     </div>
   );
 }

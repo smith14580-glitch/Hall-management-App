@@ -1,87 +1,173 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { apiRequest } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import React, { useCallback, useEffect, useState } from "react";
+import { Plus } from "lucide-react";
+import { ApiError, createTable, deactivateTable, fetchHalls, fetchTables, updateTable } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
+import type { HallTable } from "@/lib/types";
+import {
+  Badge,
+  ConnectionError,
+  EmptyState,
+  goldButtonClass,
+  inputClass,
+  labelClass,
+  LoadingState,
+  PageHeader,
+  secondaryButtonClass,
+  StatCard,
+} from "@/components/ui";
 
 export default function TablesPage() {
-  const [items, setItems] = useState<any[]>([]);
+  const { t } = useLanguage();
+  const [rows, setRows] = useState<HallTable[]>([]);
+  const [hallCapacity, setHallCapacity] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ table_number: "", capacity: "" });
-  const [error, setError] = useState("");
-  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [formError, setFormError] = useState("");
+  const [number, setNumber] = useState("");
+  const [capacity, setCapacity] = useState(10);
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    load();
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [tbls, halls] = await Promise.all([
+        fetchTables(),
+        fetchHalls().catch(() => []),
+      ]);
+      setRows(tbls);
+      setHallCapacity(halls[0]?.capacity_tables ?? null);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  async function load() {
-    setLoading(true);
-    try {
-      const data = await apiRequest<any>("/tables", { query: { hall_id: "marque-one" } });
-      setItems(data || []);
-    } catch (e) { console.error(e); } finally { setLoading(false); }
-  }
+  useEffect(() => {
+    void (async () => {
+      await load();
+    })();
+  }, [load]);
 
-  async function createTable() {
-    setError("");
+  const onAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError("");
+    if (!number.trim()) {
+      setFormError("Table number likho (jaise T-13).");
+      return;
+    }
+    if (capacity < 1) {
+      setFormError("Capacity kam az kam 1 honi chahiye.");
+      return;
+    }
+    setBusy(true);
     try {
-      await apiRequest("/tables", {
-        method: "POST",
-        query: { hall_id: "marque-one" },
-        body: { table_number: form.table_number, capacity: parseInt(form.capacity) || 0 },
-      });
-      setOpen(false);
-      setForm({ table_number: "", capacity: "" });
-      load();
-    } catch (e: any) { setError(e.message); }
-  }
+      await createTable({ table_number: number.trim(), capacity });
+      setNumber("");
+      setCapacity(10);
+      await load();
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : "Table add nahi hui.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleActive = async (row: HallTable) => {
+    setFormError("");
+    try {
+      if (row.is_active) {
+        await deactivateTable(row.id);
+      } else {
+        await updateTable(row.id, { is_active: true });
+      }
+      await load();
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : "Update nahi ho saka.");
+    }
+  };
+
+  const activeTables = rows.filter((r) => r.is_active);
+  const totalSeats = activeTables.reduce((s, r) => s + r.capacity, 0);
 
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center gap-2">
-        <h1 className="text-xl font-semibold">Table Management</h1>
-        <Button onClick={() => setOpen(true)}>Add Table</Button>
-      </div>
-      {error && <p className="text-sm text-red-500">{error}</p>}
-      <div className="border rounded p-3">
-        {loading ? (
-          <div>Loading...</div>
-        ) : items.length ? (
-          <ul className="space-y-2">
-            {items.map((t) => (
-              <li key={t.id} className="flex justify-between items-center p-2 border-b">
-                <div>
-                  <div className="font-medium">{t.table_number}</div>
-                  <div className="text-xs text-muted-foreground">{t.capacity} seats</div>
-                </div>
-                <span className={`text-xs font-medium ${t.is_active ? "text-green-600" : "text-red-600"}`}>
-                  {t.is_active ? "Active" : "Inactive"}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-muted-foreground text-sm">No tables</p>
-        )}
-      </div>
+    <div>
+      <PageHeader
+        title={t("tables")}
+        subtitle="Har table ka number aur guest capacity. Allocation booking detail page se hoti hai."
+      />
 
-      <div className={`fixed inset-0 z-50 ${open ? "flex" : "hidden"} items-center justify-center bg-black/50`}>
-        <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-sm">
-          <h2 className="text-lg font-semibold mb-4">Add Table</h2>
-          <div className="space-y-3">
-            <label className="text-sm font-medium block">Table Number</label>
-            <Input value={form.table_number} onChange={(e) => setForm({ ...form, table_number: e.target.value })} />
-            <label className="text-sm font-medium block">Capacity</label>
-            <Input type="number" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} />
+      {error ? (
+        <ConnectionError error={error} onRetry={() => void load()} />
+      ) : loading ? (
+        <LoadingState />
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <StatCard label="Total Tables" value={String(rows.length)} sub={`${activeTables.length} active`} />
+            <StatCard label="Total Seats" value={String(totalSeats)} sub="Sum of active table capacities" />
+            <StatCard label="Hall Capacity (tables)" value={hallCapacity === null ? "Not set" : String(hallCapacity)} sub={hallCapacity === null ? "Settings me capacity set karo — tab tak allocation kaam nahi karegi." : "Set in hall settings"} />
           </div>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={createTable}>Save</Button>
+
+          {hallCapacity === null && (
+            <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+              Hall capacity abhi set nahi hai (ARCHITECTURE.md Q4). Capacity set kiye baghair table
+              allocation enforce nahi ho sakti — Settings / hall details me capacity_tables bharo.
+            </p>
+          )}
+
+          <form onSubmit={onAdd} className="mt-6 flex flex-wrap items-end gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-stone-line">
+            <div>
+              <label htmlFor="table_number" className={labelClass}>Table Number *</label>
+              <input id="table_number" value={number} onChange={(e) => setNumber(e.target.value)} placeholder="T-13" className={inputClass} />
+            </div>
+            <div>
+              <label htmlFor="table_capacity" className={labelClass}>Seats *</label>
+              <input id="table_capacity" type="number" min={1} value={capacity} onChange={(e) => setCapacity(Number(e.target.value))} className={inputClass} />
+            </div>
+            <button type="submit" disabled={busy} className={goldButtonClass}>
+              <Plus className="h-4 w-4" /> {busy ? "Adding…" : "Add Table"}
+            </button>
+            {formError && <p className="w-full text-sm text-red-600" role="alert">{formError}</p>}
+          </form>
+
+          <div className="mt-6 overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-stone-line">
+            {rows.length === 0 ? (
+              <EmptyState message="No tables yet — upar se pehli table add karo." />
+            ) : (
+              <table className="w-full min-w-120 text-left text-sm">
+                <thead>
+                  <tr className="border-b border-stone-line text-xs uppercase tracking-wide text-ink/50">
+                    <th className="px-5 py-3">Table</th>
+                    <th className="px-5 py-3">Capacity</th>
+                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={row.id} className="border-b border-stone-line last:border-0 hover:bg-offwhite">
+                      <td className="px-5 py-3 font-display text-lg font-bold text-charcoal">{row.table_number}</td>
+                      <td className="px-5 py-3">{row.capacity} guests</td>
+                      <td className="px-5 py-3">
+                        <Badge tone={row.is_active ? "green" : "grey"}>{row.is_active ? t("active") : t("inactive")}</Badge>
+                      </td>
+                      <td className="px-5 py-3">
+                        <button type="button" onClick={() => toggleActive(row)} className={secondaryButtonClass}>
+                          {row.is_active ? "Deactivate" : "Activate"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }

@@ -1,83 +1,93 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { apiRequest } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import React, { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { Search } from "lucide-react";
+import { fetchCustomers } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
+import type { Customer } from "@/lib/types";
+import {
+  ConnectionError,
+  EmptyState,
+  inputClass,
+  LoadingState,
+  PageHeader,
+} from "@/components/ui";
 
 export default function CustomersPage() {
-  const [items, setItems] = useState<any[]>([]);
-  const [search, setSearch] = useState("");
+  const { t } = useLanguage();
+  const [rows, setRows] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ full_name: "", phone: "" });
-  const [error, setError] = useState("");
-  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    load();
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setRows(await fetchCustomers(search));
+    } catch (err) {
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
   }, [search]);
 
-  async function load() {
-    setLoading(true);
-    try {
-      const data = await apiRequest<any>("/customers", { query: { search } });
-      setItems(data.items || []);
-    } catch (e) { console.error(e); } finally { setLoading(false); }
-  }
-
-  async function createCustomer() {
-    setError("");
-    try {
-      await apiRequest("/customers", { method: "POST", body: form });
-      setOpen(false);
-      setForm({ full_name: "", phone: "" });
-      load();
-    } catch (e: any) { setError(e.message); }
-  }
+  useEffect(() => {
+    const timer = setTimeout(load, 300);
+    return () => clearTimeout(timer);
+  }, [load]);
 
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center gap-2">
-        <h1 className="text-xl font-semibold">Customers</h1>
-        <Button onClick={() => setOpen(true)}>Add Customer</Button>
-      </div>
-      <Input placeholder="Search name/phone" value={search} onChange={(e) => setSearch(e.target.value)} />
-      {error && <p className="text-sm text-red-500">{error}</p>}
-      <div className="border rounded p-3">
-        {loading ? (
-          <div>Loading...</div>
-        ) : items.length ? (
-          <ul className="space-y-2">
-            {items.map((c) => (
-              <li key={c.id} className="flex justify-between items-center p-2 border-b">
-                <div>
-                  <div className="font-medium">{c.full_name}</div>
-                  <div className="text-xs text-muted-foreground">{c.phone}</div>
-                </div>
-                <span className="text-xs font-mono">{c.id.slice(0, 8)}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-muted-foreground text-sm">No customers</p>
-        )}
+    <div>
+      <PageHeader title={t("customers")} subtitle="Name ya phone se search karo. Customer booking se khud banta hai." />
+
+      <div className="relative mb-5 max-w-md">
+        <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Name ya phone…"
+          className={`${inputClass} ps-9`}
+          aria-label={t("search")}
+        />
       </div>
 
-      <div className={`fixed inset-0 z-50 ${open ? "flex" : "hidden"} items-center justify-center bg-black/50`}>
-        <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-sm">
-          <h2 className="text-lg font-semibold mb-4">Add Customer</h2>
-          <div className="space-y-3">
-            <label className="text-sm font-medium">Full Name</label>
-            <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
-            <label className="text-sm font-medium">Phone</label>
-            <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-          </div>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={createCustomer}>Save</Button>
-          </div>
+      {error ? (
+        <ConnectionError error={error} onRetry={load} />
+      ) : loading ? (
+        <LoadingState />
+      ) : rows.length === 0 ? (
+        <EmptyState message="No customers yet. Pehli booking bante hi customer yahan aa jayega." />
+      ) : (
+        <div className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-stone-line">
+          <table className="w-full min-w-150 text-left text-sm">
+            <thead>
+              <tr className="border-b border-stone-line text-xs uppercase tracking-wide text-ink/50">
+                <th className="px-5 py-3">{t("name")}</th>
+                <th className="px-5 py-3">{t("phone")}</th>
+                <th className="px-5 py-3">{t("address")}</th>
+                <th className="px-5 py-3">{t("actions")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((c) => (
+                <tr key={c.id} className="border-b border-stone-line last:border-0 hover:bg-offwhite">
+                  <td className="px-5 py-3 font-semibold text-charcoal">{c.full_name}</td>
+                  <td className="px-5 py-3" dir="ltr">{c.phone}</td>
+                  <td className="px-5 py-3">{c.address || "—"}</td>
+                  <td className="px-5 py-3">
+                    <Link href={`/customers/${c.id}`} className="font-semibold text-gold-dark hover:underline">
+                      {t("view")} →
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      </div>
+      )}
     </div>
   );
 }

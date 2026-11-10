@@ -1,28 +1,37 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Noto_Nastaliq_Urdu, Playfair_Display } from "next/font/google";
 import "./globals.css";
-import ClientShell from "./client-shell";
+import { AuthProvider } from "@/lib/auth";
+import { LanguageProvider } from "@/lib/i18n";
+import { AppShell } from "@/components/layout";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({ subsets: ["latin"], variable: "--font-body", display: "swap" });
+const playfair = Playfair_Display({
   subsets: ["latin"],
+  variable: "--font-display",
+  display: "swap",
 });
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const nastaliq = Noto_Nastaliq_Urdu({
+  subsets: ["arabic"],
+  variable: "--font-urdu",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "MARQUE ONE — Marriage Hall Management",
-  description: "MARQUE ONE Marriage Hall Management System",
+  title: "MARQUE ONE — Marriage Hall Management System",
+  description:
+    "MARQUE ONE marriage hall management: bookings, calendar, customers, payments, tables, employees and attendance.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">
-        <ClientShell>{children}</ClientShell>
+    <html lang="en" className={`${inter.variable} ${playfair.variable} ${nastaliq.variable}`}>
+      <body>
+        <LanguageProvider>
+          <AuthProvider>
+            <AppShell>{children}</AppShell>
+          </AuthProvider>
+        </LanguageProvider>
       </body>
     </html>
   );
