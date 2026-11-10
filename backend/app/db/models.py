@@ -211,6 +211,8 @@ class EventTableAllocation(Base):
     created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
+    table: Mapped["Table"] = relationship("Table", lazy="joined")
+
     __table_args__ = (UniqueConstraint("booking_id", "table_id", name="uq_alloc_booking_table"),)
 
 

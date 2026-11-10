@@ -9,7 +9,9 @@ from app.core.deps import get_current_user, require_role
 from app.db.session import get_db
 from app.db.models import User, Booking
 from app.schemas.booking import BookingCreate, BookingOut
+from app.schemas.table import TableAllocate
 from app.services.booking import create_booking, list_bookings, get_booking
+from app.services.table import get_allocations_svc, allocate_tables_svc, remove_allocation_svc
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
@@ -80,3 +82,35 @@ def get_booking_endpoint(
         "status": b.status, "customer_id": str(b.customer_id), "hall_id": str(b.hall_id),
         "created_by": str(b.created_by),
     }}
+
+
+@router.get("/{booking_id}/tables", response_model=dict)
+def get_booking_tables_endpoint(
+    booking_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("super_admin")),
+):
+    rows = get_allocations_svc(db, booking_id)
+    return {"success": True, "data": rows}
+
+
+@router.post("/{booking_id}/tables", response_model=dict)
+def allocate_booking_tables_endpoint(
+    booking_id: UUID,
+    body: TableAllocate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("super_admin")),
+):
+    rows = allocate_tables_svc(db, booking_id, body.table_ids, user.id)
+    return {"success": True, "data": rows, "message": "Tables allocated"}
+
+
+@router.delete("/{booking_id}/tables/{table_id}", response_model=dict)
+def remove_booking_table_endpoint(
+    booking_id: UUID,
+    table_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("super_admin")),
+):
+    rows = remove_allocation_svc(db, booking_id, table_id, user.id)
+    return {"success": True, "data": rows, "message": "Table removed"}
