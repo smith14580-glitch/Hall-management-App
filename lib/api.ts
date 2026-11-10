@@ -555,6 +555,16 @@ export async function updateTable(id: string, body: Record<string, unknown>): Pr
   return apiFetch<HallTable>(`/tables/${id}`, { method: "PATCH", body });
 }
 
+export async function activateTable(id: string): Promise<HallTable> {
+  requireLogin();
+  if (demoActive()) {
+    const t = SAMPLE_TABLES.find((x) => x.id === id);
+    if (!t) throw new ApiError(404, "NOT_FOUND", "Table nahi mili.");
+    return sample({ ...t, is_active: true } as HallTable);
+  }
+  return apiFetch<HallTable>(`/tables/${id}/activate`, { method: "POST" });
+}
+
 export async function deactivateTable(id: string): Promise<void> {
   requireLogin();
   if (demoActive()) return sample(undefined);

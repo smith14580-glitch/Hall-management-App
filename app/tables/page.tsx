@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
-import { ApiError, createTable, deactivateTable, fetchHalls, fetchTables, updateTable } from "@/lib/api";
+import { ApiError, activateTable, createTable, deactivateTable, fetchHalls, fetchTables } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 import type { HallTable } from "@/lib/types";
 import {
@@ -82,7 +82,7 @@ export default function TablesPage() {
       if (row.is_active) {
         await deactivateTable(row.id);
       } else {
-        await updateTable(row.id, { is_active: true });
+        await activateTable(row.id);
       }
       await load();
     } catch (err) {

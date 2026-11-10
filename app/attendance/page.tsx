@@ -107,7 +107,11 @@ export default function AttendancePage() {
       setActionMsg(`Check-in ho gaya — ${formatTime(row.check_in_at)}${row.is_late ? " (Late)" : ""}`);
       await load();
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : "Check-in nahi ho saka.");
+      if (err instanceof ApiError && err.code === "DUPLICATE_CHECKIN") {
+        setActionError("Aaj ka check-in pehle hi ho chuka hai — dobara check-in nahi ho sakta. / Already checked in today.");
+      } else {
+        setActionError(err instanceof ApiError ? err.message : "Check-in nahi ho saka.");
+      }
     } finally {
       setBusy(false);
     }
@@ -122,7 +126,11 @@ export default function AttendancePage() {
       setActionMsg(`Check-out ho gaya — working time ${formatWorkingMinutes(row.working_minutes)}.`);
       await load();
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : "Check-out nahi ho saka.");
+      if (err instanceof ApiError && (err.code === "INVALID_CHECKOUT" || err.code === "ALREADY_CHECKED_OUT")) {
+        setActionError("Pehle check-in zaroori hai, ya aaj ka check-out pehle hi ho chuka hai. / Check-in required first, or already checked out today.");
+      } else {
+        setActionError(err instanceof ApiError ? err.message : "Check-out nahi ho saka.");
+      }
     } finally {
       setBusy(false);
     }
@@ -330,8 +338,8 @@ export default function AttendancePage() {
               </div>
 
               <div className="mt-4 flex gap-2">
-                <button type="button" onClick={doCheckIn} data-requires-auth disabled={busy} className={primaryButtonClass}>Manager Check In</button>
-                <button type="button" onClick={doCheckOut} data-requires-auth disabled={busy} className={secondaryButtonClass}>Manager Check Out</button>
+                <button type="button" onClick={doCheckIn} data-requires-auth disabled={busy || checkedIn || checkedOut} className={primaryButtonClass}>Manager Check In</button>
+                <button type="button" onClick={doCheckOut} data-requires-auth disabled={busy || !checkedIn || checkedOut} className={secondaryButtonClass}>Manager Check Out</button>
               </div>
             </>
           )}
