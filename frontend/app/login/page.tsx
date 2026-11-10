@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslation } from "@/lib/i18n";
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -27,14 +29,14 @@ export default function LoginPage() {
         },
       );
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.error?.message || "Login failed");
-      localStorage.setItem("access_token", json.data?.access_token || json.access_token);
-      if (json.data?.refresh_token || json.refresh_token) {
-        localStorage.setItem("refresh_token", json.data?.refresh_token || json.refresh_token);
+      if (!res.ok) throw new Error(json?.error?.message || t("login_failed"));
+      localStorage.setItem("access_token", json.data?.access_token ?? json.access_token);
+      if (json.data?.refresh_token ?? json.refresh_token) {
+        localStorage.setItem("refresh_token", json.data?.refresh_token ?? json.refresh_token);
       }
       router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : t("login_failed"));
     } finally {
       setLoading(false);
     }
@@ -44,15 +46,20 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>MARQUE ONE</CardTitle>
+          <CardTitle className="text-center">{t("app_name")}</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
-            <Input placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-            <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Input placeholder={t("phone")} value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <Input
+              type="password"
+              placeholder={t("password")}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
             {error && <p className="text-sm text-red-500">{error}</p>}
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? t("signing_in") : t("sign_in")}
             </Button>
           </form>
         </CardContent>
