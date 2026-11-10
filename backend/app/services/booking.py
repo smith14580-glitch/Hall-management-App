@@ -93,3 +93,37 @@ def list_bookings(db, skip=0, limit=100, search=None, status=None, event_date=No
 
 def get_booking(db: Session, booking_id: uuid.UUID):
     return booking_crud.get_booking(db, booking_id)
+
+
+def confirm_booking(db: Session, booking: Booking) -> Booking:
+    if booking.status != "pending":
+        raise HTTPException(status_code=400, detail={"code": "VALIDATION_ERROR", "message": "Only pending bookings can be confirmed"})
+    booking.status = "confirmed"
+    db.add(booking)
+    db.commit()
+    db.refresh(booking)
+    return booking
+
+
+def cancel_booking(db: Session, booking: Booking, cancelled_by: uuid.UUID, reason: str) -> Booking:
+    if booking.status in ("cancelled", "completed"):
+        raise HTTPException(status_code=400, detail={"code": "VALIDATION_ERROR", "message": "Cannot cancel a cancelled/completed booking"})
+    booking.status = "cancelled"
+    booking.cancelled_by = cancelled_by
+    booking.cancelled_reason = reason
+    db.add(booking)
+    db.commit()
+    db.refresh(booking)
+    return booking
+
+
+def complete_booking(db: Session, booking: Booking) -> Booking:
+    if booking.status != "confirmed":
+        raise HTTPException(status_code=400, detail={"code": "VALIDATION_ERROR", "message": "Only confirmed bookings can be completed"})
+    from datetime import datetime, timezone
+    booking.status = "completed"
+    booking.completed_at = datetime.now(timezone.utc)
+    db.add(booking)
+    db.commit()
+    db.refresh(booking)
+    return booking

@@ -10,7 +10,7 @@ from app.db.session import get_db
 from app.db.models import User, Booking
 from app.schemas.booking import BookingCreate, BookingOut
 from app.schemas.table import TableAllocate
-from app.services.booking import create_booking, list_bookings, get_booking
+from app.services.booking import create_booking, list_bookings, get_booking, confirm_booking, cancel_booking, complete_booking
 from app.services.table import get_allocations_svc, allocate_tables_svc, remove_allocation_svc
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
@@ -114,3 +114,58 @@ def remove_booking_table_endpoint(
 ):
     rows = remove_allocation_svc(db, booking_id, table_id, user.id)
     return {"success": True, "data": rows, "message": "Table removed"}
+
+
+@router.post("/{booking_id}/confirm", response_model=dict)
+def confirm_booking_endpoint(
+    booking_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("super_admin")),
+):
+    b = get_booking(db, booking_id)
+    if not b:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Booking not found"})
+    try:
+        b = confirm_booking(db, b)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail={"code": "VALIDATION_ERROR", "message": str(e)})
+    return {"success": True, "data": {"id": str(b.id), "status": b.status}, "message": "Booking confirmed"}
+
+
+@router.post("/{booking_id}/cancel", response_model=dict)
+def cancel_booking_endpoint(
+    booking_id: UUID,
+    reason: str = Query(..., min_length=1),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("super_admin")),
+):
+    b = get_booking(db, booking_id)
+    if not b:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Booking not found"})
+    try:
+        b = cancel_booking(db, b, user.id, reason)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail={"code": "VALIDATION_ERROR", "message": str(e)})
+    return {"success": True, "data": {"id": str(b.id), "status": b.status, "reason": b.cancelled_reason}, "message": "Booking cancelled"}
+
+
+@router.post("/{booking_id}/complete", response_model=dict)
+def complete_booking_endpoint(
+    booking_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("super_admin")),
+):
+    b = get_booking(db, booking_id)
+    if not b:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Booking not found"})
+    try:
+        b = complete_booking(db, b)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail={"code": "VALIDATION_ERROR", "message": str(e)})
+    return {"success": True, "data": {"id": str(b.id), "status": b.status}, "message": "Booking completed"}
