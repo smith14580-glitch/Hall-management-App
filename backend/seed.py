@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -8,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.security import hash_password
 from app.db.session import SessionLocal, Base, engine
-from app.db.models import Role, User, Hall, ApplicationSetting
+from app.db.models import Role, User, Hall, ApplicationSetting, Employee
 
 Base.metadata.create_all(bind=engine)
 
@@ -53,14 +54,31 @@ def seed(db: Session) -> None:
 
     # first admin
     admin_phone = settings.FIRST_ADMIN_PHONE
+    admin_user = None
     if not db.query(User).filter(User.phone == admin_phone).first():
         role = db.query(Role).filter(Role.name == "super_admin").first()
+        admin_user = User(
+            role_id=role.id,
+            full_name=settings.FIRST_ADMIN_NAME,
+            phone=admin_phone,
+            password_hash=hash_password(settings.FIRST_ADMIN_PASSWORD),
+            is_active=True,
+        )
+        db.add(admin_user)
+        db.flush()
+    else:
+        admin_user = db.query(User).filter(User.phone == admin_phone).first()
+
+    # link employee record for admin
+    if not db.query(Employee).filter(Employee.user_id == admin_user.id).first():
         db.add(
-            User(
-                role_id=role.id,
+            Employee(
+                user_id=admin_user.id,
+                employee_code="EMP-0001",
                 full_name=settings.FIRST_ADMIN_NAME,
                 phone=admin_phone,
-                password_hash=hash_password(settings.FIRST_ADMIN_PASSWORD),
+                role="manager",
+                duty_start_time=time(9, 0),
                 is_active=True,
             )
         )
