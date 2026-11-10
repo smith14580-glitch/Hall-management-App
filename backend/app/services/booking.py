@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import conflict
 from app.core.config import settings
 from app.crud import booking as booking_crud
+from app.crud.notification import create_notification
 from app.db.models import Booking, Customer, Hall, ApplicationSetting, User
 
 
@@ -84,6 +85,11 @@ def create_booking(db: Session, data, created_by: uuid.UUID) -> Booking:
     )
     db.commit()
     db.refresh(booking)
+    create_notification(
+        db, created_by, "booking_created", f"Booking {booking_code} created",
+        f"{data.event_type} on {data.event_date} ({data.slot})",
+        related_booking_id=booking.id,
+    )
     return booking
 
 
@@ -102,6 +108,11 @@ def confirm_booking(db: Session, booking: Booking) -> Booking:
     db.add(booking)
     db.commit()
     db.refresh(booking)
+    create_notification(
+        db, booking.created_by, "booking_confirmed", f"Booking {booking.booking_code} confirmed",
+        f"{booking.event_type} on {booking.event_date} ({booking.slot})",
+        related_booking_id=booking.id,
+    )
     return booking
 
 
@@ -114,6 +125,11 @@ def cancel_booking(db: Session, booking: Booking, cancelled_by: uuid.UUID, reaso
     db.add(booking)
     db.commit()
     db.refresh(booking)
+    create_notification(
+        db, cancelled_by, "booking_cancelled", f"Booking {booking.booking_code} cancelled",
+        f"Reason: {reason}",
+        related_booking_id=booking.id,
+    )
     return booking
 
 
@@ -126,4 +142,9 @@ def complete_booking(db: Session, booking: Booking) -> Booking:
     db.add(booking)
     db.commit()
     db.refresh(booking)
+    create_notification(
+        db, booking.created_by, "booking_completed", f"Booking {booking.booking_code} completed",
+        f"{booking.event_type} on {booking.event_date} ({booking.slot})",
+        related_booking_id=booking.id,
+    )
     return booking
