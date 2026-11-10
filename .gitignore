@@ -1,7 +1,23 @@
-node_modules
-.next
-out
-.env.local
+# secrets
 .env
+.env.local
+.env*.local
+
+# node / next
+node_modules/
+.next/
+out/
 *.log
+.vercel
+*.tsbuildinfo
+
+# backend is a separate repo — never track it here
+/backend/
+.venv/
+__pycache__/
+*.pyc
+
+# misc
 .DS_Store
+.idea/
+.vscode/
