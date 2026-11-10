@@ -33,6 +33,7 @@ export default function EmployeesPage() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [jobRole, setJobRole] = useState("waiter");
+  const [password, setPassword] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -64,10 +65,16 @@ export default function EmployeesPage() {
     }
     setBusy(true);
     try {
-      await createEmployee({ full_name: fullName.trim(), phone: phone.trim(), role: jobRole });
+      await createEmployee({
+        full_name: fullName.trim(),
+        phone: phone.trim(),
+        role: jobRole,
+        password: password.trim() || undefined,
+      });
       setFullName("");
       setPhone("");
       setJobRole("waiter");
+      setPassword("");
       setShowForm(false);
       await load();
     } catch (err) {
@@ -178,6 +185,11 @@ export default function EmployeesPage() {
                   <option key={r} value={r}>{r}</option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label htmlFor="emp_password" className={labelClass}>Login Password (optional)</label>
+              <input id="emp_password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 8 chars — login ke liye" className={inputClass} />
+              <p className="mt-1 text-xs text-ink/50">Agar password do toh employee is phone + password se login kar sakta hai (role staff/waiter). Khali chhodo toh sirf employee record banega.</p>
             </div>
             <p className="text-xs text-ink/60">
               Employee code (EMP-0001…) backend khud banata hai. Login account alag se
