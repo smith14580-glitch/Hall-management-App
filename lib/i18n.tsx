@@ -78,6 +78,21 @@ const EN: Dict = {
   noData: "No records yet.",
   managerApp: "Manager App",
   staffApp: "Staff App",
+  demoView: "Demo view",
+  demoViewBanner: "Demo view — live data ke liye login karein.",
+  demoViewNote: "Aap demo data dekh rahe hain. Write actions ke liye login zaroori hai.",
+  loginRequired: "Ye action ke liye login zaroori hai.",
+  browseDemo: "Demo dekhein — bina login ke",
+  addEmployee: "Add Employee",
+  addTable: "Add Table",
+  createBooking: "Create Booking",
+  recordPayment: "Record Payment",
+  confirmBooking: "Confirm Booking",
+  completeBooking: "Mark Completed",
+  cancelBooking: "Cancel Booking",
+  downloadCsv: "Download CSV",
+  markToday: "Mark for Today",
+  staffNotice: "Staff account — sirf attendance aur apni info.",
 };
 
 const UR: Dict = {
@@ -146,6 +161,21 @@ const UR: Dict = {
   noData: "ابھی کوئی ریکارڈ نہیں ہے۔",
   managerApp: "مینجر ایپ",
   staffApp: "اسٹاف ایپ",
+  demoView: "ڈیمو ویو",
+  demoViewBanner: "ڈیمو ویو — لائیو ڈیٹا کے لیے لاگ ان کریں۔",
+  demoViewNote: "آپ ڈیمو ڈیٹا دیکھ رہے ہیں۔ یہ کارروائیاں کرنے کے لیے لاگ ان ضروری ہے۔",
+  loginRequired: "یہ کارروائی کرنے کے لیے لاگ ان ضروری ہے۔",
+  browseDemo: "ڈیمو دیکھیں — بغیر لاگ ان",
+  addEmployee: "ملازم شامل کریں",
+  addTable: "میز شامل کریں",
+  createBooking: "بکنگ بنائیں",
+  recordPayment: "ادائیگی درج کریں",
+  confirmBooking: "بکنگ کی تصدیق کریں",
+  completeBooking: "مکمل قرار دیں",
+  cancelBooking: "بکنگ منسوخ کریں",
+  downloadCsv: "CSV ڈاؤن لوڈ کریں",
+  markToday: "آج کے لیے نشان زد کریں",
+  staffNotice: "اسٹاف اکاؤنٹ — صرف حاضری اور اپنی معلومات۔",
 };
 
 const DICTS: Record<Language, Dict> = { en: EN, ur: UR };

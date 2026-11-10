@@ -18,6 +18,7 @@ import {
   recordPayment,
   voidPayment,
 } from "@/lib/api";
+import { useLanguage } from "@/lib/i18n";
 import { formatDate, formatPKR, todayISO } from "@/lib/format";
 import { PAYMENT_METHODS, type Booking, type HallTable, type Payment, type TableAllocation } from "@/lib/types";
 import {
@@ -52,6 +53,7 @@ export default function BookingDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const router = useRouter();
+  const { t } = useLanguage();
   const [booking, setBooking] = useState<Booking | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [tables, setTables] = useState<HallTable[]>([]);
@@ -193,18 +195,18 @@ export default function BookingDetailPage() {
         actions={
           <>
             {booking.status === "pending" && (
-              <button type="button" disabled={actionBusy} onClick={() => doAction("confirm")} className={goldButtonClass}>
-                Confirm Booking
+              <button type="button" data-requires-auth disabled={actionBusy} onClick={() => doAction("confirm")} className={goldButtonClass}>
+                {t("confirmBooking")}
               </button>
             )}
             {booking.status === "confirmed" && (
-              <button type="button" disabled={actionBusy} onClick={() => doAction("complete")} className={primaryButtonClass}>
-                Mark Completed
+              <button type="button" data-requires-auth disabled={actionBusy} onClick={() => doAction("complete")} className={primaryButtonClass}>
+                {t("completeBooking")}
               </button>
             )}
             {(booking.status === "pending" || booking.status === "confirmed") && (
-              <button type="button" disabled={actionBusy} onClick={() => setShowCancel(true)} className={dangerButtonClass}>
-                Cancel Booking
+              <button type="button" data-requires-auth disabled={actionBusy} onClick={() => setShowCancel(true)} className={dangerButtonClass}>
+                {t("cancelBooking")}
               </button>
             )}
           </>
@@ -247,11 +249,11 @@ export default function BookingDetailPage() {
           <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
             <div className="flex items-center justify-between">
               <h2 className="font-display text-lg font-bold text-charcoal">Payments</h2>
-              {booking.status !== "cancelled" && (
-                <button type="button" onClick={() => setShowPaymentForm((v) => !v)} className={goldButtonClass}>
-                  Record Payment
-                </button>
-              )}
+          {booking.status !== "cancelled" && (
+            <button type="button" data-requires-auth onClick={() => setShowPaymentForm((v) => !v)} className={goldButtonClass}>
+              {t("recordPayment")}
+            </button>
+          )}
             </div>
 
             {showPaymentForm && (
@@ -280,9 +282,9 @@ export default function BookingDetailPage() {
                   <input id="reference" className={inputClass} placeholder="Transaction / cheque no." {...register("reference")} />
                 </div>
                 <div className="sm:col-span-2 flex gap-2">
-                  <button type="submit" disabled={isSubmitting} className={goldButtonClass}>
-                    {isSubmitting ? "Saving…" : "Save Payment"}
-                  </button>
+                    <button type="submit" data-requires-auth disabled={isSubmitting} className={goldButtonClass}>
+                      {isSubmitting ? "Saving…" : "Save Payment"}
+                    </button>
                   <button type="button" onClick={() => setShowPaymentForm(false)} className={secondaryButtonClass}>Cancel</button>
                 </div>
               </form>
@@ -315,9 +317,9 @@ export default function BookingDetailPage() {
                               <Receipt className="h-3.5 w-3.5" /> Receipt
                             </button>
                             {!p.is_voided && (
-                              <button type="button" onClick={() => onVoidPayment(p.id)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50" aria-label={`Void ${p.receipt_number}`}>
-                                <Trash2 className="h-3.5 w-3.5" /> Void
-                              </button>
+                <button type="button" data-requires-auth onClick={() => onVoidPayment(p.id)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50" aria-label={`Void ${p.receipt_number}`}>
+                  <Trash2 className="h-3.5 w-3.5" /> Void
+                </button>
                             )}
                           </div>
                         </td>
@@ -351,7 +353,7 @@ export default function BookingDetailPage() {
                     );
                   })}
                 </div>
-                <button type="button" onClick={onSaveTables} disabled={tableBusy} className={`${goldButtonClass} mt-4`}>
+                <button type="button" data-requires-auth onClick={onSaveTables} disabled={tableBusy} className={`${goldButtonClass} mt-4`}>
                   {tableBusy ? "Saving…" : `Save Allocation (${selectedTables.length} tables)`}
                 </button>
                 {seatedCapacity < booking.guest_count && selectedTables.length > 0 && (

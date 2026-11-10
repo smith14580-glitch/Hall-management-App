@@ -263,8 +263,8 @@ export default function NewBookingPage() {
           )}
 
           <div className="flex gap-3">
-            <button type="submit" disabled={isSubmitting || !!conflict} className={goldButtonClass}>
-              <CalendarPlus className="h-4 w-4" /> {isSubmitting ? "Saving…" : "Create Booking"}
+            <button type="submit" data-requires-auth disabled={isSubmitting || !!conflict} className={goldButtonClass}>
+              <CalendarPlus className="h-4 w-4" /> {isSubmitting ? "Saving…" : t("createBooking")}
             </button>
             <button type="button" onClick={() => router.push("/bookings")} className={secondaryButtonClass}>
               {t("cancel")}

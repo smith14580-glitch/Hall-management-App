@@ -42,6 +42,31 @@ export const API_URL =
 export const USE_SAMPLE_DATA =
   process.env.NEXT_PUBLIC_USE_SAMPLE_DATA === "true";
 
+// A visitor without a session can browse every page in "demo view" with
+// clearly-labelled sample data. Writes still require a real login.
+export const LOGIN_REQUIRED_EVENT = "marqueone:login-required";
+
+export function hasSession(): boolean {
+  if (typeof window === "undefined") return false;
+  return Boolean(window.localStorage.getItem(ACCESS_KEY) && window.localStorage.getItem(USER_KEY));
+}
+
+function demoActive(): boolean {
+  return USE_SAMPLE_DATA || !hasSession();
+}
+
+function requireLogin(): void {
+  if (hasSession()) return;
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(LOGIN_REQUIRED_EVENT));
+  }
+  throw new ApiError(
+    401,
+    "LOGIN_REQUIRED",
+    "Ye action ke liye login zaroori hai — pehle login karein. / Login is required for this action.",
+  );
+}
+
 export class ApiError extends Error {
   status: number;
   code: string;
@@ -262,12 +287,12 @@ export async function logout(): Promise<void> {
 
 // ---------- Dashboard (§4.10) ----------
 export async function fetchDashboardSummary(): Promise<DashboardSummary> {
-  if (USE_SAMPLE_DATA) return sample(SAMPLE_SUMMARY);
+  if (demoActive()) return sample(SAMPLE_SUMMARY);
   return apiFetch<DashboardSummary>("/dashboard/summary");
 }
 
 export async function fetchRevenue(period: string): Promise<RevenuePoint[]> {
-  if (USE_SAMPLE_DATA) return sample(SAMPLE_REVENUE);
+  if (demoActive()) return sample(SAMPLE_REVENUE);
   const data = await apiFetch<unknown>(`/dashboard/revenue?period=${period}`);
   if (Array.isArray(data)) return data as RevenuePoint[];
   const obj = data as { series?: RevenuePoint[]; data?: RevenuePoint[] };
@@ -286,7 +311,7 @@ export interface BookingFilters {
 }
 
 export async function fetchBookings(filters: BookingFilters = {}): Promise<Booking[]> {
-  if (USE_SAMPLE_DATA) {
+  if (demoActive()) {
     let rows = [...SAMPLE_BOOKINGS];
     if (filters.search) {
       const q = filters.search.toLowerCase();
@@ -312,7 +337,7 @@ export async function fetchBookings(filters: BookingFilters = {}): Promise<Booki
 }
 
 export async function fetchBooking(id: string): Promise<Booking> {
-  if (USE_SAMPLE_DATA) {
+  if (demoActive()) {
     const b = SAMPLE_BOOKINGS.find((x) => x.id === id || x.booking_code === id);
     if (!b) throw new ApiError(404, "NOT_FOUND", "Booking nahi mili.");
     return sample(b);
@@ -321,7 +346,8 @@ export async function fetchBooking(id: string): Promise<Booking> {
 }
 
 export async function createBooking(body: Record<string, unknown>): Promise<Booking> {
-  if (USE_SAMPLE_DATA) {
+  requireLogin();
+  if (demoActive()) {
     const created: Booking = {
       id: `bk-${Date.now()}`,
       booking_code: `MQ-2026-${String(SAMPLE_BOOKINGS.length + 1).padStart(4, "0")}`,
@@ -349,12 +375,14 @@ export async function createBooking(body: Record<string, unknown>): Promise<Book
 }
 
 export async function updateBooking(id: string, body: Record<string, unknown>): Promise<Booking> {
-  if (USE_SAMPLE_DATA) return sample({ ...(await fetchBooking(id)), ...body } as Booking);
+  requireLogin();
+  if (demoActive()) return sample({ ...(await fetchBooking(id)), ...body } as Booking);
   return apiFetch<Booking>(`/bookings/${id}`, { method: "PATCH", body });
 }
 
 export async function bookingAction(id: string, action: "confirm" | "cancel" | "complete", body?: Record<string, unknown>): Promise<Booking> {
-  if (USE_SAMPLE_DATA) {
+  requireLogin();
+  if (demoActive()) {
     const b = await fetchBooking(id);
     const status = action === "confirm" ? "confirmed" : action === "cancel" ? "cancelled" : "completed";
     return sample({ ...b, status } as Booking);
@@ -363,18 +391,18 @@ export async function bookingAction(id: string, action: "confirm" | "cancel" | "
 }
 
 export async function fetchUpcomingBookings(): Promise<Booking[]> {
-  if (USE_SAMPLE_DATA) return sample(SAMPLE_BOOKINGS.filter((b) => b.status === "confirmed" || b.status === "pending"));
+  if (demoActive()) return sample(SAMPLE_BOOKINGS.filter((b) => b.status === "confirmed" || b.status === "pending"));
   return asArray<Booking>(await apiFetch<unknown>("/bookings/upcoming"));
 }
 
 export async function fetchTodaysBookings(): Promise<Booking[]> {
-  if (USE_SAMPLE_DATA) return sample([]);
+  if (demoActive()) return sample([]);
   return asArray<Booking>(await apiFetch<unknown>("/bookings/today"));
 }
 
 // ---------- Availability & calendar (§4.6) ----------
 export async function fetchAvailability(month: string, hallId?: string): Promise<AvailabilityDay[]> {
-  if (USE_SAMPLE_DATA) return sample(sampleAvailability(month));
+  if (demoActive()) return sample(sampleAvailability(month));
   const q = new URLSearchParams({ month });
   if (hallId) q.set("hall_id", hallId);
   const data = await apiFetch<unknown>(`/availability?${q.toString()}`);
@@ -384,7 +412,7 @@ export async function fetchAvailability(month: string, hallId?: string): Promise
 }
 
 export async function checkAvailability(hallId: string, eventDate: string, slot: string): Promise<{ available: boolean; conflicting_booking_code?: string }> {
-  if (USE_SAMPLE_DATA) {
+  if (demoActive()) {
     const clash = SAMPLE_BOOKINGS.find(
       (b) => b.event_date === eventDate && b.slot === slot && (b.status === "pending" || b.status === "confirmed"),
     );
@@ -396,7 +424,7 @@ export async function checkAvailability(hallId: string, eventDate: string, slot:
 
 // ---------- Customers (§4.3) ----------
 export async function fetchCustomers(search = ""): Promise<Customer[]> {
-  if (USE_SAMPLE_DATA) {
+  if (demoActive()) {
     const q = search.toLowerCase();
     return sample(
       q
@@ -409,7 +437,7 @@ export async function fetchCustomers(search = ""): Promise<Customer[]> {
 }
 
 export async function fetchCustomer(id: string): Promise<Customer> {
-  if (USE_SAMPLE_DATA) {
+  if (demoActive()) {
     const c = SAMPLE_CUSTOMERS.find((x) => x.id === id);
     if (!c) throw new ApiError(404, "NOT_FOUND", "Customer nahi mila.");
     return sample(c);
@@ -418,12 +446,12 @@ export async function fetchCustomer(id: string): Promise<Customer> {
 }
 
 export async function fetchCustomerBookings(id: string): Promise<Booking[]> {
-  if (USE_SAMPLE_DATA) return sample(SAMPLE_BOOKINGS.filter((b) => b.customer_id === id));
+  if (demoActive()) return sample(SAMPLE_BOOKINGS.filter((b) => b.customer_id === id));
   return asArray<Booking>(await apiFetch<unknown>(`/customers/${id}/bookings`));
 }
 
 export async function fetchCustomerSummary(id: string): Promise<CustomerSummary> {
-  if (USE_SAMPLE_DATA) {
+  if (demoActive()) {
     const rows = SAMPLE_BOOKINGS.filter((b) => b.customer_id === id);
     return sample({
       total_bookings: rows.length,
@@ -436,28 +464,30 @@ export async function fetchCustomerSummary(id: string): Promise<CustomerSummary>
 
 // ---------- Halls & pricing (§4.4) ----------
 export async function fetchHalls(): Promise<Hall[]> {
-  if (USE_SAMPLE_DATA) return sample([SAMPLE_HALL]);
+  if (demoActive()) return sample([SAMPLE_HALL]);
   return asArray<Hall>(await apiFetch<unknown>("/halls"));
 }
 
 export async function fetchPricing(): Promise<Pricing> {
-  if (USE_SAMPLE_DATA) return sample({ day_price: SAMPLE_HALL.day_price, night_price: SAMPLE_HALL.night_price, hall_id: "hall-1", hall_name: "MARQUE ONE" });
+  if (demoActive()) return sample({ day_price: SAMPLE_HALL.day_price, night_price: SAMPLE_HALL.night_price, hall_id: "hall-1", hall_name: "MARQUE ONE" });
   return apiFetch<Pricing>("/pricing/current");
 }
 
 export async function updateHall(id: string, body: Record<string, unknown>): Promise<Hall> {
-  if (USE_SAMPLE_DATA) return sample({ ...SAMPLE_HALL, ...body } as Hall);
+  requireLogin();
+  if (demoActive()) return sample({ ...SAMPLE_HALL, ...body } as Hall);
   return apiFetch<Hall>(`/halls/${id}`, { method: "PATCH", body });
 }
 
 // ---------- Payments (§4.7) ----------
 export async function fetchBookingPayments(bookingId: string): Promise<Payment[]> {
-  if (USE_SAMPLE_DATA) return sample(SAMPLE_PAYMENTS.filter((p) => p.booking_id === bookingId));
+  if (demoActive()) return sample(SAMPLE_PAYMENTS.filter((p) => p.booking_id === bookingId));
   return asArray<Payment>(await apiFetch<unknown>(`/bookings/${bookingId}/payments`));
 }
 
 export async function recordPayment(bookingId: string, body: Record<string, unknown>): Promise<Payment> {
-  if (USE_SAMPLE_DATA) {
+  requireLogin();
+  if (demoActive()) {
     const booking = SAMPLE_BOOKINGS.find((b) => b.id === bookingId);
     return sample({
       id: `pay-${Date.now()}`,
@@ -476,7 +506,8 @@ export async function recordPayment(bookingId: string, body: Record<string, unkn
 }
 
 export async function voidPayment(paymentId: string, reason: string): Promise<Payment> {
-  if (USE_SAMPLE_DATA) {
+  requireLogin();
+  if (demoActive()) {
     const p = SAMPLE_PAYMENTS.find((x) => x.id === paymentId);
     if (!p) throw new ApiError(404, "NOT_FOUND", "Payment nahi mili.");
     return sample({ ...p, is_voided: true, void_reason: reason });
@@ -485,12 +516,12 @@ export async function voidPayment(paymentId: string, reason: string): Promise<Pa
 }
 
 export async function fetchOutstanding(): Promise<Booking[]> {
-  if (USE_SAMPLE_DATA) return sample(SAMPLE_BOOKINGS.filter((b) => b.balance_amount > 0 && b.status !== "cancelled"));
+  if (demoActive()) return sample(SAMPLE_BOOKINGS.filter((b) => b.balance_amount > 0 && b.status !== "cancelled"));
   return asArray<Booking>(await apiFetch<unknown>("/payments/outstanding"));
 }
 
 export async function fetchAllPayments(): Promise<Payment[]> {
-  if (USE_SAMPLE_DATA) return sample(SAMPLE_PAYMENTS);
+  if (demoActive()) return sample(SAMPLE_PAYMENTS);
   // No global payments list endpoint in §4 — build it from recent bookings.
   const bookings = await fetchBookings({});
   const lists = await Promise.all(
@@ -501,20 +532,22 @@ export async function fetchAllPayments(): Promise<Payment[]> {
 
 // ---------- Tables (§4.8) ----------
 export async function fetchTables(hallId?: string): Promise<HallTable[]> {
-  if (USE_SAMPLE_DATA) return sample(SAMPLE_TABLES);
+  if (demoActive()) return sample(SAMPLE_TABLES);
   const q = hallId ? `?hall_id=${hallId}` : "";
   return asArray<HallTable>(await apiFetch<unknown>(`/tables${q}`));
 }
 
 export async function createTable(body: Record<string, unknown>): Promise<HallTable> {
-  if (USE_SAMPLE_DATA) {
+  requireLogin();
+  if (demoActive()) {
     return sample({ id: `tbl-${Date.now()}`, hall_id: "hall-1", table_number: String(body.table_number || ""), capacity: Number(body.capacity || 10), is_active: true });
   }
   return apiFetch<HallTable>("/tables", { method: "POST", body });
 }
 
 export async function updateTable(id: string, body: Record<string, unknown>): Promise<HallTable> {
-  if (USE_SAMPLE_DATA) {
+  requireLogin();
+  if (demoActive()) {
     const t = SAMPLE_TABLES.find((x) => x.id === id);
     if (!t) throw new ApiError(404, "NOT_FOUND", "Table nahi mili.");
     return sample({ ...t, ...body } as HallTable);
@@ -523,17 +556,19 @@ export async function updateTable(id: string, body: Record<string, unknown>): Pr
 }
 
 export async function deactivateTable(id: string): Promise<void> {
-  if (USE_SAMPLE_DATA) return sample(undefined);
+  requireLogin();
+  if (demoActive()) return sample(undefined);
   await apiFetch(`/tables/${id}/deactivate`, { method: "POST" });
 }
 
 export async function fetchBookingTables(bookingId: string): Promise<TableAllocation[]> {
-  if (USE_SAMPLE_DATA) return sample([]);
+  if (demoActive()) return sample([]);
   return asArray<TableAllocation>(await apiFetch<unknown>(`/bookings/${bookingId}/tables`));
 }
 
 export async function allocateTables(bookingId: string, tableIds: string[]): Promise<TableAllocation[]> {
-  if (USE_SAMPLE_DATA) return sample(tableIds.map((tid, i) => ({ id: `al-${i}`, booking_id: bookingId, table_id: tid })));
+  requireLogin();
+  if (demoActive()) return sample(tableIds.map((tid, i) => ({ id: `al-${i}`, booking_id: bookingId, table_id: tid })));
   return asArray<TableAllocation>(
     await apiFetch<unknown>(`/bookings/${bookingId}/tables`, { method: "POST", body: { table_ids: tableIds } }),
   );
@@ -541,7 +576,7 @@ export async function allocateTables(bookingId: string, tableIds: string[]): Pro
 
 // ---------- Employees (§4.2) ----------
 export async function fetchEmployees(search = ""): Promise<Employee[]> {
-  if (USE_SAMPLE_DATA) {
+  if (demoActive()) {
     const q = search.toLowerCase();
     return sample(
       q
@@ -554,7 +589,8 @@ export async function fetchEmployees(search = ""): Promise<Employee[]> {
 }
 
 export async function createEmployee(body: Record<string, unknown>): Promise<Employee> {
-  if (USE_SAMPLE_DATA) {
+  requireLogin();
+  if (demoActive()) {
     return sample({
       id: `emp-${Date.now()}`,
       employee_code: `EMP-${String(SAMPLE_EMPLOYEES.length + 1).padStart(4, "0")}`,
@@ -568,7 +604,8 @@ export async function createEmployee(body: Record<string, unknown>): Promise<Emp
 }
 
 export async function updateEmployee(id: string, body: Record<string, unknown>): Promise<Employee> {
-  if (USE_SAMPLE_DATA) {
+  requireLogin();
+  if (demoActive()) {
     const e = SAMPLE_EMPLOYEES.find((x) => x.id === id);
     if (!e) throw new ApiError(404, "NOT_FOUND", "Employee nahi mila.");
     return sample({ ...e, ...body } as Employee);
@@ -577,13 +614,15 @@ export async function updateEmployee(id: string, body: Record<string, unknown>):
 }
 
 export async function deactivateEmployee(id: string): Promise<void> {
-  if (USE_SAMPLE_DATA) return sample(undefined);
+  requireLogin();
+  if (demoActive()) return sample(undefined);
   await apiFetch(`/employees/${id}/deactivate`, { method: "POST" });
 }
 
 // ---------- Attendance (§4.9) ----------
 export async function checkIn(): Promise<AttendanceRow> {
-  if (USE_SAMPLE_DATA) {
+  requireLogin();
+  if (demoActive()) {
     return sample({
       id: `att-${Date.now()}`,
       employee_id: "emp-3",
@@ -600,7 +639,8 @@ export async function checkIn(): Promise<AttendanceRow> {
 }
 
 export async function checkOut(): Promise<AttendanceRow> {
-  if (USE_SAMPLE_DATA) {
+  requireLogin();
+  if (demoActive()) {
     return sample({
       id: `att-${Date.now()}`,
       employee_id: "emp-3",
@@ -617,24 +657,25 @@ export async function checkOut(): Promise<AttendanceRow> {
 }
 
 export async function fetchMyAttendance(month: string): Promise<AttendanceRow[]> {
-  if (USE_SAMPLE_DATA) return sample(SAMPLE_ATTENDANCE);
+  if (demoActive()) return sample(SAMPLE_ATTENDANCE);
   return asArray<AttendanceRow>(await apiFetch<unknown>(`/attendance/me?month=${month}`));
 }
 
 export async function fetchTodayAttendance(): Promise<AttendanceRow[]> {
-  if (USE_SAMPLE_DATA) return sample(SAMPLE_ATTENDANCE);
+  if (demoActive()) return sample(SAMPLE_ATTENDANCE);
   return asArray<AttendanceRow>(await apiFetch<unknown>("/attendance/today"));
 }
 
 export async function fetchAttendance(month: string, employeeId?: string): Promise<AttendanceRow[]> {
-  if (USE_SAMPLE_DATA) return sample(SAMPLE_ATTENDANCE);
+  if (demoActive()) return sample(SAMPLE_ATTENDANCE);
   const q = new URLSearchParams({ month });
   if (employeeId) q.set("employee_id", employeeId);
   return asArray<AttendanceRow>(await apiFetch<unknown>(`/attendance?${q.toString()}`));
 }
 
 export async function markAttendance(body: Record<string, unknown>): Promise<AttendanceRow> {
-  if (USE_SAMPLE_DATA) {
+  requireLogin();
+  if (demoActive()) {
     return sample({
       id: `att-${Date.now()}`,
       employee_id: String(body.employee_id || ""),
@@ -651,7 +692,7 @@ export async function markAttendance(body: Record<string, unknown>): Promise<Att
 
 // ---------- Reports (§4.10) ----------
 export async function fetchReport(kind: "bookings" | "revenue" | "outstanding" | "attendance", params: Record<string, string> = {}): Promise<unknown> {
-  if (USE_SAMPLE_DATA) {
+  if (demoActive()) {
     if (kind === "outstanding") return sample(SAMPLE_BOOKINGS.filter((b) => b.balance_amount > 0));
     if (kind === "attendance") return sample(SAMPLE_ATTENDANCE);
     if (kind === "revenue") return sample(SAMPLE_REVENUE);
@@ -663,7 +704,7 @@ export async function fetchReport(kind: "bookings" | "revenue" | "outstanding" |
 
 // ---------- Settings & audit (§4.12) ----------
 export async function fetchSettings(): Promise<SettingItem[]> {
-  if (USE_SAMPLE_DATA) {
+  if (demoActive()) {
     return sample([
       { key: "hall_day_price", value: "150000", description: "Day booking price (PKR) — UNCONFIRMED, see ARCHITECTURE.md Q2" },
       { key: "hall_night_price", value: "300000", description: "Night booking price (PKR)" },
@@ -684,11 +725,12 @@ export async function fetchSettings(): Promise<SettingItem[]> {
 }
 
 export async function updateSetting(key: string, value: string): Promise<void> {
-  if (USE_SAMPLE_DATA) return sample(undefined);
+  requireLogin();
+  if (demoActive()) return sample(undefined);
   await apiFetch(`/settings/${encodeURIComponent(key)}`, { method: "PATCH", body: { value } });
 }
 
 export async function fetchAuditLogs(): Promise<unknown[]> {
-  if (USE_SAMPLE_DATA) return sample([]);
+  if (demoActive()) return sample([]);
   return asArray(await apiFetch<unknown>("/audit-logs"));
 }

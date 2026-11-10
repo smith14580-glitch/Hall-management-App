@@ -113,7 +113,7 @@ export default function SettingsPage() {
         title={t("settings")}
         subtitle="Hall pricing, advance, slot timings aur duty rules — sab yahan se badalte hain. Koi price code me hardcoded nahi hai."
         actions={
-          <button type="button" onClick={saveAll} disabled={busy} className={goldButtonClass}>
+          <button type="button" data-requires-auth onClick={saveAll} disabled={busy} className={goldButtonClass}>
             {busy ? "Saving…" : t("save")}
           </button>
         }

@@ -60,7 +60,7 @@ export default function BookingsPage() {
         title={t("bookings")}
         subtitle="Search by customer name, phone, booking ID, date or status."
         actions={
-          <Link href="/bookings/new" className={goldButtonClass}>
+          <Link href="/bookings/new" data-requires-auth className={goldButtonClass}>
             <Plus className="h-4 w-4" /> {t("newBooking")}
           </Link>
         }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -10,6 +10,7 @@ import {
   CalendarDays,
   Clock,
   LayoutDashboard,
+  LogIn,
   LogOut,
   Menu,
   Settings,
@@ -19,7 +20,7 @@ import {
 import { cn } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
 import { useLanguage } from "@/lib/i18n";
-import { USE_SAMPLE_DATA } from "@/lib/api";
+import { LOGIN_REQUIRED_EVENT, USE_SAMPLE_DATA } from "@/lib/api";
 
 interface NavItem {
   href: string;
@@ -40,6 +41,25 @@ const NAV: NavItem[] = [
   { href: "/reports", labelKey: "reports", icon: <BarChart3 className="h-5 w-5" />, managerOnly: true },
   { href: "/settings", labelKey: "settings", icon: <Settings className="h-5 w-5" />, managerOnly: true },
 ];
+
+// Manager-only URL prefixes. Logged-in staff/waiter users are redirected to
+// their attendance home (ARCHITECTURE.md §5.2). Demo visitors are NOT
+// redirected — they can preview every page with sample data.
+const MANAGER_PREFIXES = [
+  "/bookings",
+  "/calendar",
+  "/customers",
+  "/payments",
+  "/tables",
+  "/employees",
+  "/reports",
+  "/settings",
+];
+
+function isManagerPath(pathname: string): boolean {
+  if (pathname === "/") return true;
+  return MANAGER_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
 
 function LanguageToggle() {
   const { lang, setLang } = useLanguage();
@@ -68,15 +88,43 @@ function LanguageToggle() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading, logout, isManager } = useAuth();
+  const { user, loading, logout, isManager, isDemo } = useAuth();
   const { t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  React.useEffect(() => {
-    if (!loading && !user && pathname !== "/login") {
-      router.replace("/login");
-    }
-  }, [loading, user, pathname, router]);
+  // Never force login: visitors browse in demo view. Logged-in staff keep
+  // their attendance-only home.
+  useEffect(() => {
+    if (loading || !user || isManager) return;
+    if (isManagerPath(pathname)) router.replace("/attendance");
+  }, [loading, user, isManager, pathname, router]);
+
+  // Write actions dispatch this event when no session exists.
+  useEffect(() => {
+    const onLoginRequired = () => {
+      const next =
+        pathname && pathname !== "/login" ? `?reason=login&next=${encodeURIComponent(pathname)}` : "?reason=login";
+      router.push(`/login${next}`);
+    };
+    window.addEventListener(LOGIN_REQUIRED_EVENT, onLoginRequired);
+    return () => window.removeEventListener(LOGIN_REQUIRED_EVENT, onLoginRequired);
+  }, [router, pathname]);
+
+  // Intercept write triggers (links, buttons) for logged-out visitors before
+  // any form/modal opens, and send them to login with an explanation.
+  useEffect(() => {
+    if (user) return;
+    const onClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      const trigger = target?.closest?.("[data-requires-auth]");
+      if (!trigger) return;
+      event.preventDefault();
+      event.stopPropagation();
+      window.dispatchEvent(new CustomEvent(LOGIN_REQUIRED_EVENT));
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, [user]);
 
   if (pathname === "/login") {
     return <>{children}</>;
@@ -90,11 +138,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) return null;
-
-  const items = NAV.filter((item) => isManager || !item.managerOnly);
+  const items = NAV.filter((item) => isManager || isDemo || !item.managerOnly);
   const active = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+
+  const handleLogout = () => {
+    logout();
+    router.replace("/");
+  };
 
   const sidebar = (
     <div className="flex h-full flex-col bg-charcoal text-white">
@@ -103,7 +154,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           MARQUE <span className="text-gold">ONE</span>
         </p>
         <p className="mt-1 text-xs text-white/50">
-          {isManager ? t("managerApp") : t("staffApp")} · {user.full_name}
+          {user ? `${isManager ? t("managerApp") : t("staffApp")} · ${user.full_name}` : t("demoView")}
         </p>
       </div>
       <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Main navigation">
@@ -129,17 +180,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </ul>
       </nav>
       <div className="border-t border-charcoal-soft p-4">
-        <button
-          type="button"
-          onClick={() => {
-            logout();
-            router.replace("/login");
-          }}
-          className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/80 hover:bg-charcoal-soft hover:text-white"
-        >
-          <LogOut className="h-5 w-5" />
-          {t("logout")}
-        </button>
+        {user ? (
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/80 hover:bg-charcoal-soft hover:text-white"
+          >
+            <LogOut className="h-5 w-5" />
+            {t("logout")}
+          </button>
+        ) : (
+          <Link
+            href="/login"
+            onClick={() => setMenuOpen(false)}
+            className="flex min-h-11 w-full items-center gap-3 rounded-lg bg-gold px-3 py-2.5 text-sm font-semibold text-charcoal hover:bg-gold-dark hover:text-white"
+          >
+            <LogIn className="h-5 w-5" />
+            {t("login")}
+          </Link>
+        )}
       </div>
     </div>
   );
@@ -175,24 +234,45 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p className="font-display text-lg font-bold text-charcoal lg:hidden">
             MARQUE <span className="text-gold">ONE</span>
           </p>
-          <div className="ms-auto flex items-center gap-3">
+          <div className="ms-auto flex items-center gap-2 sm:gap-3">
             <LanguageToggle />
-            <span className="hidden rounded-full bg-gold-light px-3 py-1.5 text-xs font-semibold text-gold-dark sm:inline">
-              {user.role === "super_admin" ? "Manager" : user.role === "waiter" ? "Waiter" : "Staff"}
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                logout();
-                router.replace("/login");
-              }}
-              className="rounded-lg p-2 text-charcoal hover:bg-offwhite lg:hidden"
-              aria-label={t("logout")}
-            >
-              <LogOut className="h-5 w-5" />
-            </button>
+            {user ? (
+              <>
+                <span className="hidden rounded-full bg-gold-light px-3 py-1.5 text-xs font-semibold text-gold-dark sm:inline">
+                  {user.role === "super_admin" ? "Manager" : user.role === "waiter" ? "Waiter" : "Staff"}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="rounded-lg p-2 text-charcoal hover:bg-offwhite lg:hidden"
+                  aria-label={t("logout")}
+                >
+                  <LogOut className="h-5 w-5" />
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-charcoal hover:bg-gold-dark hover:text-white sm:px-4"
+              >
+                <LogIn className="h-4 w-4" />
+                {t("login")}
+              </Link>
+            )}
           </div>
         </header>
+
+        {isDemo && (
+          <div
+            className="border-b border-gold/40 bg-gold-light px-4 py-2 text-center text-sm font-semibold text-charcoal"
+            role="status"
+          >
+            {t("demoViewBanner")}{" "}
+            <Link href="/login" className="text-gold-dark underline underline-offset-2">
+              {t("login")}
+            </Link>
+          </div>
+        )}
 
         {USE_SAMPLE_DATA && (
           <div className="bg-amber-400 px-4 py-2 text-center text-sm font-bold text-charcoal" role="status">

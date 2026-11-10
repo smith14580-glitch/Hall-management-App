@@ -92,7 +92,7 @@ export default function CalendarPage() {
         title={t("calendar")}
         subtitle="Day aur Night alag slots hain — ek hi date par dono book ho sakte hain."
         actions={
-          <Link href="/bookings/new" className={goldButtonClass}>
+          <Link href="/bookings/new" data-requires-auth className={goldButtonClass}>
             <Plus className="h-4 w-4" /> {t("newBooking")}
           </Link>
         }
@@ -211,7 +211,7 @@ export default function CalendarPage() {
                     ))}
                   </ul>
                 )}
-                <Link href={`/bookings/new?date=${selected}`} className={`${goldButtonClass} mt-4 w-full`}>
+                <Link href={`/bookings/new?date=${selected}`} data-requires-auth className={`${goldButtonClass} mt-4 w-full`}>
                   <Plus className="h-4 w-4" /> Is Date Par Booking Karein
                 </Link>
               </>

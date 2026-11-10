@@ -128,8 +128,8 @@ export default function TablesPage() {
               <label htmlFor="table_capacity" className={labelClass}>Seats *</label>
               <input id="table_capacity" type="number" min={1} value={capacity} onChange={(e) => setCapacity(Number(e.target.value))} className={inputClass} />
             </div>
-            <button type="submit" disabled={busy} className={goldButtonClass}>
-              <Plus className="h-4 w-4" /> {busy ? "Adding…" : "Add Table"}
+            <button type="submit" data-requires-auth disabled={busy} className={goldButtonClass}>
+              <Plus className="h-4 w-4" /> {busy ? "Adding…" : t("addTable")}
             </button>
             {formError && <p className="w-full text-sm text-red-600" role="alert">{formError}</p>}
           </form>
@@ -156,7 +156,7 @@ export default function TablesPage() {
                         <Badge tone={row.is_active ? "green" : "grey"}>{row.is_active ? t("active") : t("inactive")}</Badge>
                       </td>
                       <td className="px-5 py-3">
-                        <button type="button" onClick={() => toggleActive(row)} className={secondaryButtonClass}>
+                        <button type="button" data-requires-auth onClick={() => toggleActive(row)} className={secondaryButtonClass}>
                           {row.is_active ? "Deactivate" : "Activate"}
                         </button>
                       </td>

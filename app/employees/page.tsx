@@ -93,8 +93,8 @@ export default function EmployeesPage() {
         title={t("employees")}
         subtitle="Employees, unki job roles aur account status. Login account manager banata hai."
         actions={
-          <button type="button" onClick={() => setShowForm(true)} className={goldButtonClass}>
-            <Plus className="h-4 w-4" /> Add Employee
+          <button type="button" data-requires-auth onClick={() => setShowForm(true)} className={goldButtonClass}>
+            <Plus className="h-4 w-4" /> {t("addEmployee")}
           </button>
         }
       />
@@ -185,7 +185,7 @@ export default function EmployeesPage() {
             </p>
             {formError && <p className="text-sm text-red-600" role="alert">{formError}</p>}
             <div className="flex gap-2">
-              <button type="submit" disabled={busy} className={goldButtonClass}>{busy ? "Adding…" : "Add Employee"}</button>
+              <button type="submit" data-requires-auth disabled={busy} className={goldButtonClass}>{busy ? "Adding…" : t("addEmployee")}</button>
               <button type="button" onClick={() => setShowForm(false)} className={secondaryButtonClass}>Cancel</button>
             </div>
           </form>

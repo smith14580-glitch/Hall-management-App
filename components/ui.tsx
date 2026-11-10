@@ -10,12 +10,53 @@ export function Spinner({ className }: { className?: string }) {
   return <Loader2 className={cn("h-5 w-5 animate-spin text-gold", className)} aria-label="Loading" />;
 }
 
+export function Skeleton({ className }: { className?: string }) {
+  return <div className={cn("animate-pulse rounded-md bg-stone-200/80", className)} aria-hidden="true" />;
+}
+
 export function LoadingState({ message }: { message?: string }) {
   const { t } = useLanguage();
   return (
-    <div className="flex items-center justify-center gap-3 rounded-xl bg-white p-10 text-sm text-ink/70 shadow-sm">
-      <Spinner />
-      <span>{message || t("loading")}</span>
+    <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line" role="status" aria-label={message || t("loading")}>
+      <div className="space-y-3">
+        <Skeleton className="h-6 w-1/3" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-5/6" />
+        <Skeleton className="h-4 w-2/3" />
+      </div>
+      <span className="sr-only">{message || t("loading")}</span>
+    </div>
+  );
+}
+
+export function CardsSkeleton({ count = 4 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-hidden="true">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-line">
+          <Skeleton className="h-3 w-1/2" />
+          <Skeleton className="mt-3 h-7 w-2/3" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function TableSkeleton({ rows = 5, cols = 5 }: { rows?: number; cols?: number }) {
+  return (
+    <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-stone-line" aria-hidden="true">
+      <div className="border-b border-stone-line px-5 py-4">
+        <Skeleton className="h-4 w-40" />
+      </div>
+      <div className="divide-y divide-stone-line">
+        {Array.from({ length: rows }).map((_, r) => (
+          <div key={r} className="flex gap-4 px-5 py-4">
+            {Array.from({ length: cols }).map((__, c) => (
+              <Skeleton key={c} className="h-4 flex-1" />
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

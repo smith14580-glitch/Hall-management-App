@@ -16,6 +16,7 @@ interface AuthContextValue {
   logout: () => void;
   isManager: boolean;
   isStaff: boolean;
+  isDemo: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -27,6 +28,7 @@ const AuthContext = createContext<AuthContextValue>({
   logout: () => undefined,
   isManager: false,
   isStaff: false,
+  isDemo: false,
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -37,11 +39,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const stored = getStoredUser();
     if (!stored) return;
-    // Sample mode: there is no backend to verify against — the stored
-    // demo user is trusted as-is (demo login never makes an API call).
     if (USE_SAMPLE_DATA) {
-      setLoading(false);
-      return;
+      // Defer state update out of synchronous effect body to avoid
+      // cascading renders (react-hooks/set-state-in-effect).
+      const id = window.setTimeout(() => setLoading(false), 0);
+      return () => window.clearTimeout(id);
     }
     let cancelled = false;
     fetchMe()
@@ -83,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     isManager: user?.role === "super_admin",
     isStaff: user?.role === "staff" || user?.role === "waiter",
+    isDemo: !loading && !user,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

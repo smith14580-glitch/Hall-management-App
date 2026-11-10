@@ -31,8 +31,9 @@ import {
 } from "@/components/ui";
 
 export default function AttendancePage() {
-  const { user, isManager } = useAuth();
+  const { user, isManager, isDemo } = useAuth();
   const { t } = useLanguage();
+  const showManager = isManager || isDemo;
   const [rows, setRows] = useState<AttendanceRow[]>([]);
   const [myRows, setMyRows] = useState<AttendanceRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +53,7 @@ export default function AttendancePage() {
     setLoading(true);
     setError(null);
     try {
-      if (isManager) {
+      if (showManager) {
         const [today, monthly, emps] = await Promise.all([
           fetchTodayAttendance(),
           fetchAttendance(month),
@@ -69,13 +70,13 @@ export default function AttendancePage() {
     } finally {
       setLoading(false);
     }
-  }, [isManager, month]);
+  }, [showManager, month]);
 
   useEffect(() => {
     void (async () => {
       await load();
     })();
-  }, [isManager, month, load]);
+  }, [showManager, month, load]);
 
   useEffect(() => {
     const tick = () =>
@@ -147,7 +148,7 @@ export default function AttendancePage() {
     <div>
       <PageHeader
         title={t("attendance")}
-        subtitle={isManager ? "Aaj ki attendance, history aur monthly report." : "Apni aaj ki attendance yahan se mark karo."}
+        subtitle={showManager ? "Aaj ki attendance, history aur monthly report." : "Apni aaj ki attendance yahan se mark karo."}
       />
 
       {error ? (
@@ -157,7 +158,7 @@ export default function AttendancePage() {
       ) : (
         <>
           {/* Staff / waiter view — big touch-friendly buttons */}
-          {!isManager && (
+          {!showManager && (
             <div className="mx-auto max-w-lg">
               <div className="rounded-2xl bg-charcoal p-6 text-center text-white shadow-sm">
                 <p className="flex items-center justify-center gap-2 text-sm text-white/60">
@@ -182,10 +183,10 @@ export default function AttendancePage() {
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <button type="button" onClick={doCheckIn} disabled={busy || checkedIn || checkedOut} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl bg-gold text-lg font-bold text-charcoal shadow-sm hover:bg-gold-dark hover:text-white disabled:opacity-40">
+                <button type="button" onClick={doCheckIn} data-requires-auth disabled={busy || checkedIn || checkedOut} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl bg-gold text-lg font-bold text-charcoal shadow-sm hover:bg-gold-dark hover:text-white disabled:opacity-40">
                   <LogIn className="h-7 w-7" /> {t("checkIn")}
                 </button>
-                <button type="button" onClick={doCheckOut} disabled={busy || !checkedIn} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl bg-charcoal text-lg font-bold text-white shadow-sm hover:bg-charcoal-light disabled:opacity-40">
+                <button type="button" onClick={doCheckOut} data-requires-auth disabled={busy || !checkedIn} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl bg-charcoal text-lg font-bold text-white shadow-sm hover:bg-charcoal-light disabled:opacity-40">
                   <LogOut className="h-7 w-7" /> {t("checkOut")}
                 </button>
               </div>
@@ -219,7 +220,7 @@ export default function AttendancePage() {
           )}
 
           {/* Manager view */}
-          {isManager && (
+          {showManager && (
             <>
               <div className="grid gap-4 sm:grid-cols-3">
                 <StatCard label="Present Today" value={String(presentToday)} />
@@ -252,8 +253,8 @@ export default function AttendancePage() {
                       <option value="half_day">Half Day</option>
                     </select>
                   </div>
-                  <button type="button" onClick={doMark} disabled={!markEmp} className={goldButtonClass}>
-                    <UserX className="h-4 w-4" /> Mark for Today
+                  <button type="button" onClick={doMark} data-requires-auth disabled={!markEmp} className={goldButtonClass}>
+                    <UserX className="h-4 w-4" /> {t("markToday")}
                   </button>
                 </div>
               </div>
@@ -329,8 +330,8 @@ export default function AttendancePage() {
               </div>
 
               <div className="mt-4 flex gap-2">
-                <button type="button" onClick={doCheckIn} disabled={busy} className={primaryButtonClass}>Manager Check In</button>
-                <button type="button" onClick={doCheckOut} disabled={busy} className={secondaryButtonClass}>Manager Check Out</button>
+                <button type="button" onClick={doCheckIn} data-requires-auth disabled={busy} className={primaryButtonClass}>Manager Check In</button>
+                <button type="button" onClick={doCheckOut} data-requires-auth disabled={busy} className={secondaryButtonClass}>Manager Check Out</button>
               </div>
             </>
           )}

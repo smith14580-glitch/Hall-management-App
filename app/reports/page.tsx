@@ -87,6 +87,7 @@ export default function ReportsPage() {
             type="button"
             onClick={() => downloadCSV(`marque-one-${kind}-${month}.csv`, toCSV(rows))}
             disabled={rows.length === 0}
+            data-requires-auth
             className={goldButtonClass}
           >
             <Download className="h-4 w-4" /> Download CSV

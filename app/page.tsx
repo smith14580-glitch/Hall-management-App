@@ -52,7 +52,7 @@ function RevenueChart({ points }: { points: RevenuePoint[] }) {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, loading: authLoading, isManager } = useAuth();
+  const { user, loading: authLoading, isManager, isDemo } = useAuth();
   const { t } = useLanguage();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [revenue, setRevenue] = useState<RevenuePoint[]>([]);
@@ -89,21 +89,24 @@ export default function DashboardPage() {
   }, [authLoading, user, isManager, router]);
 
   useEffect(() => {
-    void (async () => {
-      if (user && isManager) await load();
-    })();
-  }, [user, isManager, load]);
+    if (authLoading || !(isManager || isDemo)) return;
+    const id = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(id);
+  }, [authLoading, isManager, isDemo, load]);
 
-  if (authLoading || !user) return <LoadingState />;
-  if (!isManager) return <LoadingState />;
+  if (authLoading || !(isManager || isDemo)) return <LoadingState />;
 
   return (
     <div>
       <PageHeader
         title={t("dashboard")}
-        subtitle={`Welcome back, ${user.full_name} — aaj ka kaam yahan se dekho.`}
+        subtitle={
+          user
+            ? `Welcome back, ${user.full_name} — aaj ka kaam yahan se dekho.`
+            : t("demoViewBanner")
+        }
         actions={
-          <Link href="/bookings/new" className={goldButtonClass}>
+          <Link href="/bookings/new" data-requires-auth className={goldButtonClass}>
             <Plus className="h-4 w-4" /> {t("newBooking")}
           </Link>
         }
@@ -128,7 +131,7 @@ export default function DashboardPage() {
             <div className="rounded-xl bg-charcoal p-5 text-white shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-wide text-white/60">{t("quickActions")}</p>
               <div className="mt-3 flex flex-col gap-2">
-                <Link href="/bookings/new" className="rounded-lg bg-gold px-3 py-2 text-center text-sm font-semibold text-charcoal hover:bg-gold-dark hover:text-white">
+                <Link href="/bookings/new" data-requires-auth className="rounded-lg bg-gold px-3 py-2 text-center text-sm font-semibold text-charcoal hover:bg-gold-dark hover:text-white">
                   {t("newBooking")}
                 </Link>
                 <Link href="/payments" className="rounded-lg bg-white/10 px-3 py-2 text-center text-sm font-semibold text-white hover:bg-white/20">

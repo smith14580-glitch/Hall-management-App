@@ -139,9 +139,9 @@ export default function PaymentsPage() {
                           {p.is_voided ? (
                             <Badge tone="red">Voided</Badge>
                           ) : (
-                            <button type="button" onClick={() => setReceipt(p)} className="inline-flex items-center gap-1 rounded-lg border border-stone-line px-2.5 py-1.5 text-xs font-semibold hover:bg-offwhite">
-                              <Receipt className="h-3.5 w-3.5" /> View
-                            </button>
+                <button type="button" onClick={() => setReceipt(p)} data-requires-auth className="inline-flex items-center gap-1 rounded-lg border border-stone-line px-2.5 py-1.5 text-xs font-semibold hover:bg-offwhite">
+                  <Receipt className="h-3.5 w-3.5" /> View
+                </button>
                           )}
                         </td>
                       </tr>
