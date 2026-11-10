@@ -40,10 +40,21 @@ def list_bookings_endpoint(
     slot: Optional[str] = Query(None, pattern="^(day|night)$"),
 ):
     rows, total = list_bookings(db, skip, limit, search, status, event_date, slot)
+    items = [
+        {
+            "id": str(x.id), "booking_code": x.booking_code, "event_type": x.event_type,
+            "event_date": str(x.event_date), "slot": x.slot, "guest_count": x.guest_count,
+            "tables_required": x.tables_required, "total_price": str(x.total_price),
+            "advance_amount": str(x.advance_amount), "amount_paid": str(x.amount_paid),
+            "balance_amount": str(x.balance_amount), "payment_status": x.payment_status,
+            "status": x.status, "customer_id": str(x.customer_id), "hall_id": str(x.hall_id),
+            "created_by": str(x.created_by),
+        } for x in rows
+    ]
     return {
         "success": True,
         "data": {
-            "items": rows,
+            "items": items,
             "total": total,
             "page": skip // max(limit, 1) + 1,
             "page_size": limit,
@@ -60,4 +71,12 @@ def get_booking_endpoint(
     b = get_booking(db, booking_id)
     if not b:
         raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Booking not found"})
-    return {"success": True, "data": b}
+    return {"success": True, "data": {
+        "id": str(b.id), "booking_code": b.booking_code, "event_type": b.event_type,
+        "event_date": str(b.event_date), "slot": b.slot, "guest_count": b.guest_count,
+        "tables_required": b.tables_required, "total_price": str(b.total_price),
+        "advance_amount": str(b.advance_amount), "amount_paid": str(b.amount_paid),
+        "balance_amount": str(b.balance_amount), "payment_status": b.payment_status,
+        "status": b.status, "customer_id": str(b.customer_id), "hall_id": str(b.hall_id),
+        "created_by": str(b.created_by),
+    }}
