@@ -4,6 +4,7 @@ import React, { useEffect, useCallback, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   Banknote,
   CalendarDays,
   CalendarPlus,
@@ -96,6 +97,13 @@ export default function DashboardPage() {
 
   if (authLoading || !(isManager || isDemo)) return <LoadingState />;
 
+  const upcomingAlerts = [...upcoming]
+    .sort(
+      (a, b) =>
+        a.event_date.localeCompare(b.event_date) || a.slot.localeCompare(b.slot),
+    )
+    .slice(0, 8);
+
   return (
     <div>
       <PageHeader
@@ -118,6 +126,33 @@ export default function DashboardPage() {
         <LoadingState />
       ) : (
         <>
+          {upcomingAlerts.length > 0 && (
+            <div className="mb-6 rounded-xl border-s-4 border-gold bg-gold-light/70 p-4 shadow-sm ring-1 ring-gold/30" role="status">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-gold-dark" />
+                <div className="min-w-0">
+                  <p className="font-display text-base font-bold text-charcoal">
+                    {t("calendarAlert")} — {t("calendarAlertHint")}
+                  </p>
+                  <ul className="mt-2 flex flex-wrap gap-2">
+                    {upcomingAlerts.map((b) => (
+                      <li
+                        key={`${b.id}-${b.slot}`}
+                        className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-charcoal ring-1 ring-stone-line"
+                      >
+                        {formatDate(b.event_date)} ·{" "}
+                        <span className="text-red-600">
+                          {b.slot === "day" ? t("day") : t("night")}
+                        </span>{" "}
+                        · {b.booking_code}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
             <StatCard label={t("totalBookings")} value={String(summary.total_bookings)} icon={<CalendarDays className="h-5 w-5" />} />
             <StatCard label={t("todaysEvents")} value={String(summary.todays_events)} icon={<Clock className="h-5 w-5" />} />

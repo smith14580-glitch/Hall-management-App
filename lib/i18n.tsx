@@ -93,6 +93,8 @@ const EN: Dict = {
   downloadCsv: "Download CSV",
   markToday: "Mark for Today",
   staffNotice: "Staff account — sirf attendance aur apni info.",
+  calendarAlert: "Calendar Alert",
+  calendarAlertHint: "Upcoming booked dates (Day / Night)",
 };
 
 const UR: Dict = {
@@ -176,6 +178,8 @@ const UR: Dict = {
   downloadCsv: "CSV ڈاؤن لوڈ کریں",
   markToday: "آج کے لیے نشان زد کریں",
   staffNotice: "اسٹاف اکاؤنٹ — صرف حاضری اور اپنی معلومات۔",
+  calendarAlert: "کیلنڈر الرٹ",
+  calendarAlertHint: "آنے والی بکنگ کی تاریخیں (دن / رات)",
 };
 
 const DICTS: Record<Language, Dict> = { en: EN, ur: UR };
