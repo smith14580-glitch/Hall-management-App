@@ -212,6 +212,7 @@ export default function AttendancePage() {
     setScanErr("");
     setScanOpen(true);
     try {
+      await new Promise((resolve) => setTimeout(resolve, 60));
       const { Html5Qrcode } = await import("html5-qrcode");
       const scanner = new Html5Qrcode("qr-reader");
       scannerRef.current = scanner;

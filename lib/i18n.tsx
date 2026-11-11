@@ -107,13 +107,19 @@ const EN: Dict = {
   salaryHistory: "Salary History",
   markPaid: "Mark Paid",
   attendanceBadge: "Attendance Badge",
-  scanAttendance: "Scan Attendance (QR)",
-  scanHint: "Employee ka QR badge scan karo ya employee code manual enter karo — attendance khud mark ho jayegi (check-in / check-out auto).",
+  scanAttendance: "Scan Attendance (ID Card / QR)",
+  scanHint: "Employee ka ID card / QR badge scan karo ya employee code manual enter karo — attendance khud mark ho jayegi (check-in / check-out auto).",
   startScanner: "Start Scanner",
   stopScanner: "Stop Scanner",
   manualScan: "Manual Entry",
   employeeCode: "Employee Code",
   scanAction: "Action",
+  idCards: "ID Cards",
+  employeeIdCard: "Employee ID Card",
+  salaryYear: "Salary Year",
+  annualTotal: "Annual Total",
+  baseSalary: "Base Salary",
+  payNow: "Pay Now",
 };
 
 const UR: Dict = {
@@ -211,13 +217,19 @@ const UR: Dict = {
   salaryHistory: "تنخواہ کی تاریخ",
   markPaid: "ادا شدہ نشان زد کریں",
   attendanceBadge: "حاضری بیج",
-  scanAttendance: "حاضری اسکین کریں (QR)",
-  scanHint: "ملازم کا QR بیج اسکین کریں یا ملازم کوڈ دستی طور پر لکھیں — حاضری خود درج ہو جائے گی (چیک اِن / چیک آؤٹ خودکار)۔",
+  scanAttendance: "حاضری اسکین کریں (شناختی کارڈ / QR)",
+  scanHint: "ملازم کا شناختی کارڈ / QR بیج اسکین کریں یا ملازم کوڈ دستی طور پر لکھیں — حاضری خود درج ہو جائے گی (چیک اِن / چیک آؤٹ خودکار)۔",
   startScanner: "اسکینر شروع کریں",
   stopScanner: "اسکینر بند کریں",
   manualScan: "دستی درج",
   employeeCode: "ملازم کوڈ",
   scanAction: "کارروائی",
+  idCards: "شناختی کارڈز",
+  employeeIdCard: "ملازم شناختی کارڈ",
+  salaryYear: "تنخواہ کا سال",
+  annualTotal: "سالانہ کل",
+  baseSalary: "بنیادی تنخواہ",
+  payNow: "ابھی ادا کریں",
 };
 
 const DICTS: Record<Language, Dict> = { en: EN, ur: UR };

@@ -59,6 +59,14 @@ h3,
     position: absolute;
     inset: 0;
     background: #fff;
+    max-height: none !important;
+    overflow: visible !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .employee-id-card {
+    break-inside: avoid;
+    box-shadow: none;
   }
 }
 

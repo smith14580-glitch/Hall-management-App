@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, Plus, Printer, QrCode, Search, Wallet } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { CheckCircle2, Download, IdCard, Pencil, Plus, Printer, QrCode, Search, Wallet } from "lucide-react";
 import {
   ApiError,
   createEmployee,
@@ -15,6 +14,7 @@ import {
 import { useLanguage } from "@/lib/i18n";
 import { formatDate, formatPKR, monthISO, todayISO } from "@/lib/format";
 import type { Employee, SalaryRecord } from "@/lib/types";
+import { EmployeeIdCard } from "@/components/employee-id-card";
 import {
   Badge,
   ConnectionError,
@@ -29,6 +29,9 @@ import {
 } from "@/components/ui";
 
 const JOB_ROLES = ["manager", "reception", "waiter", "cook", "cleaner", "security", "other"];
+const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR + 1 - i);
 
 function salaryTone(status: SalaryRecord["status"]) {
   if (status === "paid") return "green" as const;
@@ -51,9 +54,11 @@ export default function EmployeesPage() {
   const [password, setPassword] = useState("");
 
   const [qrEmp, setQrEmp] = useState<Employee | null>(null);
+  const [showCards, setShowCards] = useState(false);
   const [salaryEmp, setSalaryEmp] = useState<Employee | null>(null);
   const [salaryRows, setSalaryRows] = useState<SalaryRecord[]>([]);
   const [salaryLoading, setSalaryLoading] = useState(false);
+  const [salYear, setSalYear] = useState(CURRENT_YEAR);
   const [salMonth, setSalMonth] = useState(() => monthISO(new Date()));
   const [salBase, setSalBase] = useState("");
   const [salPaid, setSalPaid] = useState("0");
@@ -79,6 +84,31 @@ export default function EmployeesPage() {
     const timer = setTimeout(load, 300);
     return () => clearTimeout(timer);
   }, [load]);
+
+  const salaryYear = useMemo(() => {
+    const map = new Map<string, SalaryRecord>();
+    for (const r of salaryRows) {
+      if (r.month.startsWith(`${salYear}-`)) map.set(r.month, r);
+    }
+    return MONTH_LABELS.map((label, i) => {
+      const month = `${salYear}-${String(i + 1).padStart(2, "0")}`;
+      return { month, label, record: map.get(month) ?? null };
+    });
+  }, [salaryRows, salYear]);
+
+  const totals = useMemo(
+    () =>
+      salaryYear.reduce(
+        (acc, m) => {
+          acc.base += m.record?.base_amount ?? 0;
+          acc.paid += m.record?.paid_amount ?? 0;
+          acc.balance += m.record?.balance ?? 0;
+          return acc;
+        },
+        { base: 0, paid: 0, balance: 0 },
+      ),
+    [salaryYear],
+  );
 
   const onAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,15 +152,30 @@ export default function EmployeesPage() {
     }
   };
 
+  const selectMonth = (emp: Employee, month: string) => {
+    const rec = salaryRows.find((r) => r.month === month);
+    setSalMonth(month);
+    if (rec) {
+      setSalBase(String(rec.base_amount));
+      setSalPaid(String(rec.paid_amount));
+      setSalDate(rec.payment_date || todayISO());
+      setSalNotes(rec.notes || "");
+    } else {
+      setSalBase(emp.monthly_salary != null ? String(emp.monthly_salary) : "");
+      setSalPaid("0");
+      setSalDate(todayISO());
+      setSalNotes("");
+    }
+    setSalError("");
+    setSalMsg("");
+  };
+
   const openSalary = async (emp: Employee) => {
     setSalaryEmp(emp);
     setSalError("");
     setSalMsg("");
-    setSalMonth(monthISO(new Date()));
-    setSalBase(emp.monthly_salary != null ? String(emp.monthly_salary) : "");
-    setSalPaid("0");
-    setSalDate(todayISO());
-    setSalNotes("");
+    setSalYear(CURRENT_YEAR);
+    selectMonth(emp, monthISO(new Date()));
     setSalaryLoading(true);
     try {
       setSalaryRows(await fetchEmployeeSalary(emp.id));
@@ -186,31 +231,77 @@ export default function EmployeesPage() {
     }
   };
 
-  const onMarkPaid = async (record: SalaryRecord) => {
+  const onPayMonth = async (month: string, record: SalaryRecord | null) => {
+    if (!salaryEmp) return;
     setSalError("");
     setSalMsg("");
     try {
-      await updateSalary(record.id, {
-        paid_amount: record.base_amount,
-        payment_date: todayISO(),
-        status: "paid",
-      });
-      setSalMsg(`${record.month} — salary paid mark ho gayi.`);
-      if (salaryEmp) await reloadSalary(salaryEmp);
+      if (record) {
+        await updateSalary(record.id, {
+          paid_amount: record.base_amount,
+          payment_date: todayISO(),
+          status: "paid",
+        });
+      } else {
+        const base = Number(salaryEmp.monthly_salary || 0);
+        if (!(base > 0)) {
+          setSalError("Is month ka base amount form me enter karke Save karo, phir Pay Now dabao.");
+          selectMonth(salaryEmp, month);
+          return;
+        }
+        await saveEmployeeSalary(salaryEmp.id, {
+          month,
+          base_amount: base,
+          paid_amount: base,
+          payment_date: todayISO(),
+        });
+      }
+      setSalMsg(`${month} — salary paid mark ho gayi.`);
+      await reloadSalary(salaryEmp);
     } catch (err) {
-      setSalError(err instanceof ApiError ? err.message : "Mark paid nahi ho saka.");
+      setSalError(err instanceof ApiError ? err.message : "Salary pay nahi ho saki.");
     }
+  };
+
+  const downloadSalaryCsv = () => {
+    if (!salaryEmp) return;
+    const header = ["Month", "Base", "Paid", "Balance", "Status", "Payment Date"];
+    const lines = salaryYear.map(({ month, record }) => [
+      month,
+      record?.base_amount ?? "",
+      record?.paid_amount ?? "",
+      record?.balance ?? "",
+      record?.status ?? "not_set",
+      record?.payment_date ?? "",
+    ]);
+    const csv =
+      "\ufeff" +
+      [header, ...lines]
+        .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
+        .join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${salaryEmp.employee_code}-salary-${salYear}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
     <div>
       <PageHeader
         title={t("employees")}
-        subtitle="Employees, unique attendance ID + QR badge, salary records aur account status."
+        subtitle="Employees, printable ID cards (QR attendance), aur 12-month salary records."
         actions={
-          <button type="button" data-requires-auth onClick={() => setShowForm(true)} className={goldButtonClass}>
-            <Plus className="h-4 w-4" /> {t("addEmployee")}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setShowCards(true)} className={secondaryButtonClass}>
+              <IdCard className="h-4 w-4" /> {t("idCards")}
+            </button>
+            <button type="button" data-requires-auth onClick={() => setShowForm(true)} className={goldButtonClass}>
+              <Plus className="h-4 w-4" /> {t("addEmployee")}
+            </button>
+          </div>
         }
       />
 
@@ -264,7 +355,7 @@ export default function EmployeesPage() {
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
                       <button type="button" onClick={() => setQrEmp(row)} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-stone-line bg-white px-2.5 py-1.5 text-xs font-semibold text-charcoal hover:bg-offwhite">
-                        <QrCode className="h-3.5 w-3.5" /> QR
+                        <QrCode className="h-3.5 w-3.5" /> ID Card
                       </button>
                       <button type="button" onClick={() => void openSalary(row)} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-stone-line bg-white px-2.5 py-1.5 text-xs font-semibold text-charcoal hover:bg-offwhite">
                         <Wallet className="h-3.5 w-3.5" /> {t("salary")}
@@ -309,7 +400,7 @@ export default function EmployeesPage() {
             </div>
             <p className="text-xs text-ink/60">
               Employee code (EMP-0001…) backend khud banata hai. Ye hi unique attendance ID hai
-              jiska QR badge scan hota hai.
+              jiska QR ID card par hota hai — scan se attendance lagti hai.
             </p>
             {formError && <p className="text-sm text-red-600" role="alert">{formError}</p>}
             <div className="flex gap-2">
@@ -321,18 +412,9 @@ export default function EmployeesPage() {
       )}
 
       {qrEmp && (
-        <Modal title={`QR — ${qrEmp.full_name}`} onClose={() => setQrEmp(null)}>
-          <div className="print-area rounded-xl border border-stone-line bg-white p-6 text-center">
-            <p className="font-display text-2xl font-bold text-charcoal">
-              MARQUE <span className="text-gold">ONE</span>
-            </p>
-            <p className="mt-1 text-xs uppercase tracking-widest text-ink/50">{t("attendanceBadge")}</p>
-            <div className="mt-4 flex justify-center">
-              <QRCodeSVG value={qrEmp.employee_code} size={190} level="M" />
-            </div>
-            <p className="mt-4 font-display text-lg font-bold text-charcoal">{qrEmp.full_name}</p>
-            <p className="font-mono text-sm font-semibold text-gold-dark">{qrEmp.employee_code}</p>
-            <p className="mt-1 text-xs capitalize text-ink/60">{qrEmp.role} · {qrEmp.phone}</p>
+        <Modal title={t("employeeIdCard")} onClose={() => setQrEmp(null)}>
+          <div className="print-area flex justify-center bg-offwhite p-4">
+            <EmployeeIdCard employee={qrEmp} />
           </div>
           <div className="mt-4 flex gap-2">
             <button type="button" onClick={() => window.print()} className={secondaryButtonClass}>
@@ -345,20 +427,132 @@ export default function EmployeesPage() {
         </Modal>
       )}
 
+      {showCards && (
+        <Modal title={t("idCards")} onClose={() => setShowCards(false)}>
+          <div className="print-area max-h-[68vh] overflow-y-auto bg-offwhite p-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {rows.map((e) => (
+                <EmployeeIdCard key={e.id} employee={e} />
+              ))}
+            </div>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => window.print()} className={secondaryButtonClass}>
+              <Printer className="h-4 w-4" /> Print All Cards
+            </button>
+            <button type="button" onClick={() => setShowCards(false)} className={secondaryButtonClass}>
+              {t("close")}
+            </button>
+            <p className="text-xs text-ink/50">Tip: ID card scan karke Attendance page par check-in/out lagta hai.</p>
+          </div>
+        </Modal>
+      )}
+
       {salaryEmp && (
         <Modal title={`${t("salary")} — ${salaryEmp.full_name}`} onClose={() => setSalaryEmp(null)}>
-          <form onSubmit={onSaveSalary} className="space-y-3">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <label htmlFor="sal_year" className={labelClass}>{t("salaryYear")}</label>
+              <select
+                id="sal_year"
+                value={salYear}
+                onChange={(e) => setSalYear(Number(e.target.value))}
+                className={inputClass}
+              >
+                {YEAR_OPTIONS.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+            <button type="button" onClick={downloadSalaryCsv} className={secondaryButtonClass}>
+              <Download className="h-4 w-4" /> {t("downloadCsv")}
+            </button>
+          </div>
+
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <div className="rounded-lg bg-offwhite p-3 ring-1 ring-stone-line">
+              <p className="text-[10px] uppercase tracking-wide text-ink/45">{t("baseSalary")}</p>
+              <p className="mt-1 font-display text-sm font-bold text-charcoal">{formatPKR(totals.base)}</p>
+            </div>
+            <div className="rounded-lg bg-emerald-50 p-3 ring-1 ring-emerald-200">
+              <p className="text-[10px] uppercase tracking-wide text-emerald-700/70">{t("paid")}</p>
+              <p className="mt-1 font-display text-sm font-bold text-emerald-800">{formatPKR(totals.paid)}</p>
+            </div>
+            <div className="rounded-lg bg-red-50 p-3 ring-1 ring-red-200">
+              <p className="text-[10px] uppercase tracking-wide text-red-700/70">{t("balance")}</p>
+              <p className="mt-1 font-display text-sm font-bold text-red-800">{formatPKR(totals.balance)}</p>
+            </div>
+          </div>
+
+          <div className="mt-4 overflow-x-auto">
+            {salaryLoading ? (
+              <LoadingState />
+            ) : (
+              <table className="w-full min-w-140 text-left text-sm">
+                <thead>
+                  <tr className="border-b border-stone-line text-[11px] uppercase tracking-wide text-ink/50">
+                    <th className="py-2 pe-2">Month</th>
+                    <th className="py-2 pe-2">Base</th>
+                    <th className="py-2 pe-2">Paid</th>
+                    <th className="py-2 pe-2">Balance</th>
+                    <th className="py-2 pe-2">Status</th>
+                    <th className="py-2">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {salaryYear.map(({ month, label, record }) => (
+                    <tr key={month} className="border-b border-stone-line last:border-0">
+                      <td className="py-2 pe-2 font-semibold text-charcoal">{label} <span className="text-[10px] text-ink/40">{month.slice(0, 4)}</span></td>
+                      <td className="py-2 pe-2">{record ? formatPKR(record.base_amount) : "—"}</td>
+                      <td className="py-2 pe-2">{record ? formatPKR(record.paid_amount) : "—"}</td>
+                      <td className={`py-2 pe-2 font-semibold ${record && record.balance > 0 ? "text-red-700" : "text-ink/60"}`}>
+                        {record ? formatPKR(record.balance) : "—"}
+                      </td>
+                      <td className="py-2 pe-2">
+                        {record ? <Badge tone={salaryTone(record.status)}>{record.status}</Badge> : <Badge tone="grey">not set</Badge>}
+                      </td>
+                      <td className="py-2">
+                        <div className="flex flex-wrap gap-1.5">
+                          {record && record.status !== "paid" && (
+                            <button
+                              type="button"
+                              data-requires-auth
+                              onClick={() => void onPayMonth(month, record)}
+                              className="inline-flex items-center gap-1 rounded-md border border-emerald-200 px-2 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50"
+                            >
+                              <CheckCircle2 className="h-3 w-3" /> {t("markPaid")}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => salaryEmp && selectMonth(salaryEmp, month)}
+                            className="inline-flex items-center gap-1 rounded-md border border-stone-line px-2 py-1 text-[11px] font-semibold text-charcoal hover:bg-offwhite"
+                          >
+                            {record ? <Pencil className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                            {record ? t("edit") : "Add"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          <h3 className="mt-6 font-display text-base font-bold text-charcoal">Add / Update Month</h3>
+          <form onSubmit={onSaveSalary} className="mt-2 space-y-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <label htmlFor="sal_month" className={labelClass}>Month *</label>
                 <input id="sal_month" type="month" value={salMonth} onChange={(e) => setSalMonth(e.target.value)} className={inputClass} />
               </div>
               <div>
-                <label htmlFor="sal_base" className={labelClass}>Base Salary (PKR) *</label>
+                <label htmlFor="sal_base" className={labelClass}>{t("baseSalary")} (PKR) *</label>
                 <input id="sal_base" type="number" min={0} value={salBase} onChange={(e) => setSalBase(e.target.value)} className={inputClass} />
               </div>
               <div>
-                <label htmlFor="sal_paid" className={labelClass}>Paid Amount (PKR)</label>
+                <label htmlFor="sal_paid" className={labelClass}>{t("paid")} (PKR)</label>
                 <input id="sal_paid" type="number" min={0} value={salPaid} onChange={(e) => setSalPaid(e.target.value)} className={inputClass} />
               </div>
               <div>
@@ -372,60 +566,21 @@ export default function EmployeesPage() {
             </div>
             {salError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{salError}</p>}
             {salMsg && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">{salMsg}</p>}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button type="submit" data-requires-auth disabled={salBusy} className={goldButtonClass}>
                 {salBusy ? "Saving…" : t("save")}
+              </button>
+              <button
+                type="button"
+                data-requires-auth
+                onClick={() => void onPayMonth(salMonth, salaryRows.find((r) => r.month === salMonth) ?? null)}
+                className={secondaryButtonClass}
+              >
+                <CheckCircle2 className="h-4 w-4" /> {t("payNow")}
               </button>
               <button type="button" onClick={() => setSalaryEmp(null)} className={secondaryButtonClass}>{t("close")}</button>
             </div>
           </form>
-
-          <h3 className="mt-6 font-display text-base font-bold text-charcoal">{t("salaryHistory")}</h3>
-          {salaryLoading ? (
-            <div className="mt-3"><LoadingState /></div>
-          ) : salaryRows.length === 0 ? (
-            <div className="mt-3"><EmptyState message={t("noData")} /></div>
-          ) : (
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-120 text-left text-sm">
-                <thead>
-                  <tr className="border-b border-stone-line text-xs uppercase tracking-wide text-ink/50">
-                    <th className="py-2 pe-3">Month</th>
-                    <th className="py-2 pe-3">Base</th>
-                    <th className="py-2 pe-3">Paid</th>
-                    <th className="py-2 pe-3">Balance</th>
-                    <th className="py-2 pe-3">Status</th>
-                    <th className="py-2">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {salaryRows.map((r) => (
-                    <tr key={r.id} className="border-b border-stone-line last:border-0">
-                      <td className="py-2 pe-3 font-semibold">{r.month}</td>
-                      <td className="py-2 pe-3">{formatPKR(r.base_amount)}</td>
-                      <td className="py-2 pe-3">{formatPKR(r.paid_amount)}</td>
-                      <td className="py-2 pe-3 font-semibold text-red-700">{formatPKR(r.balance)}</td>
-                      <td className="py-2 pe-3">
-                        <Badge tone={salaryTone(r.status)}>{r.status}</Badge>
-                      </td>
-                      <td className="py-2">
-                        {r.status !== "paid" && (
-                          <button
-                            type="button"
-                            data-requires-auth
-                            onClick={() => void onMarkPaid(r)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5" /> {t("markPaid")}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </Modal>
       )}
     </div>
