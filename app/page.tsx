@@ -252,8 +252,34 @@ export default function DashboardPage() {
             </div>
           )}
 
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+            <StatCard label={t("totalBookings")} value={String(summary.total_bookings)} icon={<CalendarDays className="h-5 w-5" />} />
+            <StatCard label={t("todaysEvents")} value={String(summary.todays_events)} icon={<Clock className="h-5 w-5" />} />
+            <StatCard label={t("upcomingWeddings")} value={String(summary.upcoming_weddings)} icon={<CalendarPlus className="h-5 w-5" />} />
+            <StatCard label={t("totalRevenue")} value={formatPKR(summary.total_revenue)} icon={<Banknote className="h-5 w-5" />} />
+            <StatCard label={t("outstanding")} value={formatPKR(summary.outstanding_payments)} icon={<Wallet className="h-5 w-5" />} />
+            <StatCard label={t("amountReceived")} value={formatPKR(summary.amount_received)} icon={<Wallet className="h-5 w-5" />} />
+            <StatCard label={t("confirmed")} value={String(summary.confirmed_bookings)} sub={`${summary.pending_bookings} ${t("pending")}`} />
+            <StatCard label={t("totalEmployees")} value={String(summary.total_employees)} icon={<Users className="h-5 w-5" />} />
+            <StatCard label={t("todaysAttendance")} value={String(summary.todays_attendance)} icon={<Clock className="h-5 w-5" />} />
+            <div className="rounded-xl bg-charcoal p-5 text-white shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-white/60">{t("quickActions")}</p>
+              <div className="mt-3 flex flex-col gap-2">
+                <Link href="/bookings/new" data-requires-auth className="rounded-lg bg-gold px-3 py-2 text-center text-sm font-semibold text-charcoal hover:bg-gold-dark hover:text-white">
+                  {t("newBooking")}
+                </Link>
+                <Link href="/payments" className="rounded-lg bg-white/10 px-3 py-2 text-center text-sm font-semibold text-white hover:bg-white/20">
+                  {t("payments")}
+                </Link>
+                <Link href="/attendance" className="rounded-lg bg-white/10 px-3 py-2 text-center text-sm font-semibold text-white hover:bg-white/20">
+                  {t("attendance")}
+                </Link>
+              </div>
+            </div>
+          </div>
+
           {upcomingAlerts.length > 0 && (
-            <div className="mb-6 rounded-xl border-s-4 border-gold bg-gold-light/70 p-4 shadow-sm ring-1 ring-gold/30" role="status">
+            <div className="mt-6 rounded-xl border-s-4 border-gold bg-gold-light/70 p-4 shadow-sm ring-1 ring-gold/30" role="status">
               <div className="flex items-start gap-3">
                 <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-gold-dark" />
                 <div className="min-w-0 flex-1">
@@ -288,32 +314,6 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
-
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-            <StatCard label={t("totalBookings")} value={String(summary.total_bookings)} icon={<CalendarDays className="h-5 w-5" />} />
-            <StatCard label={t("todaysEvents")} value={String(summary.todays_events)} icon={<Clock className="h-5 w-5" />} />
-            <StatCard label={t("upcomingWeddings")} value={String(summary.upcoming_weddings)} icon={<CalendarPlus className="h-5 w-5" />} />
-            <StatCard label={t("totalRevenue")} value={formatPKR(summary.total_revenue)} icon={<Banknote className="h-5 w-5" />} />
-            <StatCard label={t("outstanding")} value={formatPKR(summary.outstanding_payments)} icon={<Wallet className="h-5 w-5" />} />
-            <StatCard label={t("amountReceived")} value={formatPKR(summary.amount_received)} icon={<Wallet className="h-5 w-5" />} />
-            <StatCard label={t("confirmed")} value={String(summary.confirmed_bookings)} sub={`${summary.pending_bookings} ${t("pending")}`} />
-            <StatCard label={t("totalEmployees")} value={String(summary.total_employees)} icon={<Users className="h-5 w-5" />} />
-            <StatCard label={t("todaysAttendance")} value={String(summary.todays_attendance)} icon={<Clock className="h-5 w-5" />} />
-            <div className="rounded-xl bg-charcoal p-5 text-white shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-white/60">{t("quickActions")}</p>
-              <div className="mt-3 flex flex-col gap-2">
-                <Link href="/bookings/new" data-requires-auth className="rounded-lg bg-gold px-3 py-2 text-center text-sm font-semibold text-charcoal hover:bg-gold-dark hover:text-white">
-                  {t("newBooking")}
-                </Link>
-                <Link href="/payments" className="rounded-lg bg-white/10 px-3 py-2 text-center text-sm font-semibold text-white hover:bg-white/20">
-                  {t("payments")}
-                </Link>
-                <Link href="/attendance" className="rounded-lg bg-white/10 px-3 py-2 text-center text-sm font-semibold text-white hover:bg-white/20">
-                  {t("attendance")}
-                </Link>
-              </div>
-            </div>
-          </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-5">
             <div className="lg:col-span-3">
