@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#151515" />
+    <title>Offline — MARQUE ONE</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --charcoal: #151515;
+        --gold: #d99a36;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: var(--charcoal);
+        color: #fff;
+        font-family: Georgia, "Times New Roman", serif;
+      }
+      .card {
+        width: 100%;
+        max-width: 420px;
+        text-align: center;
+        border: 1px solid rgba(217, 154, 54, 0.45);
+        border-radius: 20px;
+        padding: 36px 28px;
+        background: #1d1d1d;
+      }
+      .mark {
+        width: 84px;
+        height: 84px;
+        margin: 0 auto 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid var(--gold);
+        border-radius: 22px;
+        color: var(--gold);
+        font-size: 52px;
+        font-weight: 700;
+        line-height: 1;
+      }
+      h1 {
+        margin: 0;
+        font-size: 26px;
+        letter-spacing: 0.06em;
+      }
+      h1 span {
+        color: var(--gold);
+      }
+      p {
+        margin: 14px 0 0;
+        color: rgba(255, 255, 255, 0.72);
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+      button {
+        margin-top: 22px;
+        padding: 11px 20px;
+        border: 0;
+        border-radius: 10px;
+        background: var(--gold);
+        color: var(--charcoal);
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <div class="mark">M</div>
+      <h1>MARQUE <span>ONE</span></h1>
+      <p>Internet nahi hai — connection wapas aate hi app chalega.</p>
+      <p>No internet connection. The app will work again as soon as you are back online.</p>
+      <button type="button" onclick="location.reload()">Try again</button>
+    </main>
+  </body>
+</html>
