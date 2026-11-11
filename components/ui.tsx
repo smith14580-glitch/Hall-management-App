@@ -173,25 +173,59 @@ export function PageHeader({
   );
 }
 
+type StatTone = "light" | "dark" | "gold";
+
+const STAT_TONES: Record<StatTone, { card: string; label: string; value: string; icon: string; sub: string }> = {
+  light: {
+    card: "bg-gradient-to-br from-white to-offwhite ring-stone-line",
+    label: "text-ink/50",
+    value: "text-charcoal",
+    icon: "text-gold",
+    sub: "text-ink/50",
+  },
+  dark: {
+    card: "bg-gradient-to-br from-charcoal to-charcoal-light ring-white/10",
+    label: "text-white/60",
+    value: "text-white",
+    icon: "text-gold",
+    sub: "text-white/50",
+  },
+  gold: {
+    card: "bg-gradient-to-br from-gold-light via-gold to-gold-dark ring-gold-dark/30",
+    label: "text-charcoal/70",
+    value: "text-charcoal",
+    icon: "text-charcoal",
+    sub: "text-charcoal/60",
+  },
+};
+
 export function StatCard({
   label,
   value,
   sub,
   icon,
+  tone = "light",
 }: {
   label: string;
   value: string;
   sub?: string;
   icon?: React.ReactNode;
+  tone?: StatTone;
 }) {
+  const style = STAT_TONES[tone];
   return (
-    <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-line">
+    <div
+      className={cn(
+        "rounded-xl p-5 shadow-sm ring-1 transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md",
+        style.card,
+      )}
+    >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-ink/50">{label}</p>
-        {icon && <span className="text-gold">{icon}</span>}
+        <p className={cn("text-xs font-semibold uppercase tracking-wide", style.label)}>{label}</p>
+        {icon && <span className={style.icon}>{icon}</span>}
       </div>
-      <p className="mt-2 font-display text-2xl font-bold text-charcoal">{value}</p>
-      {sub && <p className="mt-1 text-xs text-ink/50">{sub}</p>}
+      <p className={cn("mt-2 font-display text-2xl font-bold", style.value)}>{value}</p>
+      {sub && <p className={cn("mt-1 text-xs", style.sub)}>{sub}</p>}
     </div>
   );
 }

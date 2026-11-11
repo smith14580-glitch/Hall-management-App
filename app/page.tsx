@@ -253,15 +253,15 @@ export default function DashboardPage() {
           )}
 
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-            <StatCard label={t("totalBookings")} value={String(summary.total_bookings)} icon={<CalendarDays className="h-5 w-5" />} />
-            <StatCard label={t("todaysEvents")} value={String(summary.todays_events)} icon={<Clock className="h-5 w-5" />} />
-            <StatCard label={t("upcomingWeddings")} value={String(summary.upcoming_weddings)} icon={<CalendarPlus className="h-5 w-5" />} />
-            <StatCard label={t("totalRevenue")} value={formatPKR(summary.total_revenue)} icon={<Banknote className="h-5 w-5" />} />
-            <StatCard label={t("outstanding")} value={formatPKR(summary.outstanding_payments)} icon={<Wallet className="h-5 w-5" />} />
-            <StatCard label={t("amountReceived")} value={formatPKR(summary.amount_received)} icon={<Wallet className="h-5 w-5" />} />
-            <StatCard label={t("confirmed")} value={String(summary.confirmed_bookings)} sub={`${summary.pending_bookings} ${t("pending")}`} />
-            <StatCard label={t("totalEmployees")} value={String(summary.total_employees)} icon={<Users className="h-5 w-5" />} />
-            <StatCard label={t("todaysAttendance")} value={String(summary.todays_attendance)} icon={<Clock className="h-5 w-5" />} />
+            <StatCard tone="gold" label={t("totalBookings")} value={String(summary.total_bookings)} icon={<CalendarDays className="h-5 w-5" />} />
+            <StatCard tone="dark" label={t("todaysEvents")} value={String(summary.todays_events)} icon={<Clock className="h-5 w-5" />} />
+            <StatCard tone="gold" label={t("upcomingWeddings")} value={String(summary.upcoming_weddings)} icon={<CalendarPlus className="h-5 w-5" />} />
+            <StatCard tone="dark" label={t("totalRevenue")} value={formatPKR(summary.total_revenue)} icon={<Banknote className="h-5 w-5" />} />
+            <StatCard tone="light" label={t("outstanding")} value={formatPKR(summary.outstanding_payments)} icon={<Wallet className="h-5 w-5" />} />
+            <StatCard tone="dark" label={t("amountReceived")} value={formatPKR(summary.amount_received)} icon={<Wallet className="h-5 w-5" />} />
+            <StatCard tone="gold" label={t("confirmed")} value={String(summary.confirmed_bookings)} sub={`${summary.pending_bookings} ${t("pending")}`} />
+            <StatCard tone="light" label={t("totalEmployees")} value={String(summary.total_employees)} icon={<Users className="h-5 w-5" />} />
+            <StatCard tone="light" label={t("todaysAttendance")} value={String(summary.todays_attendance)} icon={<Clock className="h-5 w-5" />} />
             <div className="rounded-xl bg-charcoal p-5 text-white shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-wide text-white/60">{t("quickActions")}</p>
               <div className="mt-3 flex flex-col gap-2">
