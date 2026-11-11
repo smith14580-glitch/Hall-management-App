@@ -24,7 +24,7 @@ import {
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useLanguage } from "@/lib/i18n";
-import { formatDate, formatPKR } from "@/lib/format";
+import { formatDate, formatPKR, todayISO } from "@/lib/format";
 import type { Booking, DashboardSummary, Payment, RevenuePoint } from "@/lib/types";
 import {
   Badge,
@@ -40,6 +40,42 @@ import {
   secondaryButtonClass,
   StatCard,
 } from "@/components/ui";
+
+const MONTHS_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+function dateParts(dateStr: string) {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return { year, month: MONTHS_SHORT[(month || 1) - 1] ?? "", day: day || 0 };
+}
+
+function shortDate(dateStr: string) {
+  const { day, month } = dateParts(dateStr);
+  return day && month ? `${day} ${month}` : dateStr;
+}
+
+function slotClock(slot: string) {
+  return slot === "day" ? "dopahar 12:00 bajay" : "raat 7:00 bajay";
+}
+
+function paymentLine(b: Booking) {
+  const balance = formatPKR(b.balance_amount);
+  if (b.payment_status === "fully_paid") return "Advance received, poori payment mil gayi hai";
+  if (b.payment_status === "partially_paid") return `Advance received, balance ${balance} event se pehle due hai`;
+  return `Advance abhi due hai — ${balance}`;
+}
 
 function RevenueChart({ points }: { points: RevenuePoint[] }) {
   const max = Math.max(...points.map((p) => p.revenue), 1);
@@ -164,6 +200,17 @@ export default function DashboardPage() {
     )
     .slice(0, 8);
 
+  const todaySorted = [...today].sort((a, b) => a.slot.localeCompare(b.slot));
+  const nextUpcoming = [...upcoming]
+    .filter((b) => b.event_date > todayISO())
+    .sort(
+      (a, b) =>
+        a.event_date.localeCompare(b.event_date) || a.slot.localeCompare(b.slot),
+    );
+  const heroBooking = todaySorted[0] ?? nextUpcoming[0] ?? null;
+  const heroIsToday = todaySorted.length > 0;
+  const otherToday = heroIsToday ? todaySorted.slice(1) : [];
+
   return (
     <div>
       <PageHeader
@@ -186,6 +233,47 @@ export default function DashboardPage() {
         <LoadingState />
       ) : (
         <>
+          {heroBooking ? (
+            <Link
+              href={`/bookings/${heroBooking.id}`}
+              className="group relative mb-6 block overflow-hidden rounded-2xl bg-charcoal shadow-md ring-1 ring-charcoal/10"
+            >
+              <div
+                className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-[1.02]"
+                style={{ backgroundImage: "url('/images/hall-hero.jpg')" }}
+                aria-hidden
+              />
+              <div className="absolute inset-0 bg-charcoal/55" aria-hidden />
+              <div className="absolute inset-0 bg-gradient-to-r from-charcoal/90 via-charcoal/45 to-transparent" aria-hidden />
+              <div className="relative flex flex-col gap-3 p-6 sm:p-8 lg:p-10">
+                <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-gold">
+                  {heroIsToday ? "AAJ KA EVENT" : "AGLA EVENT"} · {heroBooking.slot === "day" ? "DAY" : "NIGHT"} SLOT
+                </p>
+                <h2 className="max-w-3xl break-words font-display text-2xl font-bold leading-tight text-white sm:text-3xl lg:text-4xl">
+                  {heroBooking.customer_name || "—"} — {heroBooking.event_type},{" "}
+                  {heroIsToday
+                    ? `aaj ${slotClock(heroBooking.slot)}`
+                    : `${shortDate(heroBooking.event_date)}, ${slotClock(heroBooking.slot)}`}
+                </h2>
+                <p className="max-w-2xl text-sm text-white/80 sm:text-base">
+                  {heroBooking.guest_count} guests · {heroBooking.tables_required} tables allocated · {paymentLine(heroBooking)}
+                </p>
+                {otherToday.length > 0 && (
+                  <p className="text-xs font-semibold text-gold-light sm:text-sm">
+                    Aaj {todaySorted.length} events hain — {todaySorted.map((b) => (b.slot === "day" ? "Day 12:00" : "Night 7:00")).join(", ")}
+                  </p>
+                )}
+                <span className="mt-1 inline-flex items-center gap-2 text-sm font-semibold text-gold">
+                  View booking <span aria-hidden>→</span>
+                </span>
+              </div>
+            </Link>
+          ) : (
+            <div className="mb-6 rounded-xl border-s-4 border-gold bg-gold-light/70 px-4 py-3 text-sm font-semibold text-charcoal ring-1 ring-gold/30">
+              Koi upcoming event nahi hai — New Booking se pehli booking banayein.
+            </div>
+          )}
+
           <div className="relative mb-5 max-w-xl">
             <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
             <input
@@ -325,19 +413,31 @@ export default function DashboardPage() {
                 <p className="mt-4 text-sm text-ink/60">{t("noData")}</p>
               ) : (
                 <ul className="mt-4 space-y-3">
-                  {upcoming.slice(0, 5).map((b) => (
-                    <li key={b.id} className="flex items-center justify-between gap-3 border-b border-stone-line pb-3 last:border-0 last:pb-0">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-charcoal">
-                          {b.customer_name || b.customer_id} · {b.event_type}
-                        </p>
-                        <p className="text-xs text-ink/60">
-                          {formatDate(b.event_date)} · {b.slot === "day" ? t("day") : t("night")} · {b.booking_code}
-                        </p>
-                      </div>
-                      <Badge tone={bookingStatusTone(b.status)}>{b.status}</Badge>
-                    </li>
-                  ))}
+                  {upcoming.slice(0, 5).map((b) => {
+                    const { day, month } = dateParts(b.event_date);
+                    return (
+                      <li key={b.id} className="border-b border-stone-line pb-3 last:border-0 last:pb-0">
+                        <Link
+                          href={`/bookings/${b.id}`}
+                          className="flex items-center gap-3 rounded-lg p-1 transition-colors hover:bg-offwhite"
+                        >
+                          <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg bg-charcoal text-white">
+                            <span className="font-display text-base font-bold leading-none">{day}</span>
+                            <span className="mt-0.5 text-[9px] font-bold uppercase tracking-wide text-gold">{month}</span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-charcoal">
+                              {b.customer_name || "—"} — {b.event_type}
+                            </p>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-ink/60">
+                              <span>{b.slot === "day" ? t("day") : t("night")} slot · {b.guest_count} guests ·</span>
+                              <Badge tone={bookingStatusTone(b.status)}>{b.status}</Badge>
+                            </div>
+                          </div>
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
               <Link href="/calendar" className={`${secondaryButtonClass} mt-4 w-full`}>
