@@ -99,10 +99,8 @@ export default function CalendarPage() {
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
-        <Badge tone="green">Available</Badge>
-        <Badge tone="amber">Pending</Badge>
+        <Badge tone="green">Free / Available</Badge>
         <Badge tone="red">Booked</Badge>
-        <Badge tone="grey">Cancelled / Past</Badge>
       </div>
 
       {error ? (
@@ -132,14 +130,20 @@ export default function CalendarPage() {
                 if (cell.blank) return <div key={cell.date} className="min-h-16 sm:min-h-20" />;
                 const dayNum = Number(cell.date.slice(-2));
                 const isSelected = selected === cell.date;
+                const dayBooked = cell.day?.day.status === "booked" || cell.day?.day.status === "pending";
+                const nightBooked = cell.day?.night.status === "booked" || cell.day?.night.status === "pending";
+                const dateBooked = dayBooked || nightBooked;
                 return (
                   <button
                     key={cell.date}
                     type="button"
                     onClick={() => openDay(cell.date)}
                     className={cn(
-                      "flex min-h-16 flex-col items-start gap-1 rounded-lg border p-1.5 text-left transition-colors sm:min-h-20 sm:p-2",
-                      isSelected ? "border-gold bg-gold-light" : "border-stone-line bg-white hover:border-gold",
+                      "flex min-h-16 flex-col items-start gap-1 rounded-lg border-2 p-1.5 text-left transition-colors sm:min-h-20 sm:p-2",
+                      dateBooked
+                        ? "border-red-500 bg-red-100 hover:bg-red-200"
+                        : "border-emerald-500 bg-emerald-100 hover:bg-emerald-200",
+                      isSelected && "ring-2 ring-charcoal ring-offset-1",
                     )}
                     aria-label={`Bookings for ${cell.date}`}
                   >
@@ -147,20 +151,16 @@ export default function CalendarPage() {
                     <span className="flex flex-col gap-1 sm:flex-row">
                       <span
                         className={cn(
-                          "rounded px-1 py-0.5 text-[10px] font-bold leading-none",
-                          cell.day?.day.status === "booked" && "bg-red-100 text-red-700",
-                          cell.day?.day.status === "pending" && "bg-amber-100 text-amber-700",
-                          (!cell.day || cell.day.day.status === "available") && "bg-emerald-100 text-emerald-700",
+                          "rounded px-1 py-0.5 text-[10px] font-bold leading-none text-white",
+                          dayBooked ? "bg-red-600" : "bg-emerald-600",
                         )}
                       >
                         D
                       </span>
                       <span
                         className={cn(
-                          "rounded px-1 py-0.5 text-[10px] font-bold leading-none",
-                          cell.day?.night.status === "booked" && "bg-red-100 text-red-700",
-                          cell.day?.night.status === "pending" && "bg-amber-100 text-amber-700",
-                          (!cell.day || cell.day.night.status === "available") && "bg-emerald-100 text-emerald-700",
+                          "rounded px-1 py-0.5 text-[10px] font-bold leading-none text-white",
+                          nightBooked ? "bg-red-600" : "bg-emerald-600",
                         )}
                       >
                         N
@@ -187,8 +187,8 @@ export default function CalendarPage() {
                   const info = dayMap.get(selected);
                   return info ? (
                     <div className="mt-3 flex gap-2">
-                      <Badge tone={slotTone(info.day.status)}>Day: {info.day.status}</Badge>
-                      <Badge tone={slotTone(info.night.status)}>Night: {info.night.status}</Badge>
+                      <Badge tone={slotTone(info.day.status)}>Day: {info.day.status === "available" ? "Free" : "Booked"}</Badge>
+                      <Badge tone={slotTone(info.night.status)}>Night: {info.night.status === "available" ? "Free" : "Booked"}</Badge>
                     </div>
                   ) : null;
                 })()}

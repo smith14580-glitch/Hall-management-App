@@ -149,16 +149,8 @@ export function paymentStatusTone(status: string): BadgeTone {
 }
 
 export function slotTone(status: string): BadgeTone {
-  switch (status) {
-    case "booked":
-      return "red";
-    case "pending":
-      return "amber";
-    case "available":
-      return "green";
-    default:
-      return "grey";
-  }
+  // Calendar uses only two colours: green = free, red = booked/held.
+  return status === "available" ? "green" : "red";
 }
 
 export function PageHeader({
