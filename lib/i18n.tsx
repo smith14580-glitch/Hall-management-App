@@ -95,6 +95,14 @@ const EN: Dict = {
   staffNotice: "Staff account — sirf attendance aur apni info.",
   calendarAlert: "Calendar Alert",
   calendarAlertHint: "Upcoming booked dates (Day / Night)",
+  searchDashboard: "Search bookings — customer, phone, booking ID, date…",
+  viewRecord: "View record",
+  alertHintClick: "Click a date to see the complete record (booking + payments).",
+  completeRecord: "Complete Record",
+  close: "Close",
+  openBooking: "Open full booking",
+  paymentHistory: "Payment History",
+  noPayments: "No payments recorded.",
 };
 
 const UR: Dict = {
@@ -180,6 +188,14 @@ const UR: Dict = {
   staffNotice: "اسٹاف اکاؤنٹ — صرف حاضری اور اپنی معلومات۔",
   calendarAlert: "کیلنڈر الرٹ",
   calendarAlertHint: "آنے والی بکنگ کی تاریخیں (دن / رات)",
+  searchDashboard: "بکنگ تلاش کریں — گاہک، فون، بکنگ آئی ڈی، تاریخ…",
+  viewRecord: "ریکارڈ دیکھیں",
+  alertHintClick: "مکمل ریکارڈ (بکنگ + ادائیگیاں) دیکھنے کے لیے تاریخ پر کلک کریں۔",
+  completeRecord: "مکمل ریکارڈ",
+  close: "بند کریں",
+  openBooking: "پوری بکنگ کھولیں",
+  paymentHistory: "ادائیگیوں کی تاریخ",
+  noPayments: "کوئی ادائیگی درج نہیں ہے۔",
 };
 
 const DICTS: Record<Language, Dict> = { en: EN, ur: UR };
