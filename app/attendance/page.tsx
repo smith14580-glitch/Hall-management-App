@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useCallback, useState } from "react";
-import { CheckCircle2, Clock, LogIn, LogOut, UserX } from "lucide-react";
+import { Camera, CheckCircle2, Clock, LogIn, LogOut, ScanLine, Square, UserX } from "lucide-react";
 import {
   ApiError,
   checkIn,
@@ -11,6 +11,7 @@ import {
   fetchMyAttendance,
   fetchTodayAttendance,
   markAttendance,
+  scanAttendance,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useLanguage } from "@/lib/i18n";
@@ -46,6 +47,13 @@ export default function AttendancePage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [markEmp, setMarkEmp] = useState("");
   const [markStatus, setMarkStatus] = useState("absent");
+  const [scanMsg, setScanMsg] = useState("");
+  const [scanErr, setScanErr] = useState("");
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanBusy, setScanBusy] = useState(false);
+  const [manualCode, setManualCode] = useState("");
+  const [manualAction, setManualAction] = useState<"auto" | "check-in" | "check-out">("auto");
+  const scannerRef = React.useRef<{ stop: () => Promise<void>; clear: () => void } | null>(null);
 
   // Data loading lives in an Effect Event: effects may call it, and it
   // always sees the latest state without re-running the effect.
@@ -148,6 +156,99 @@ export default function AttendancePage() {
     }
   };
 
+  useEffect(() => {
+    return () => {
+      const s = scannerRef.current;
+      if (s) {
+        s.stop().catch(() => undefined);
+        try {
+          s.clear();
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+  }, []);
+
+  const handleScan = async (code: string, action: "auto" | "check-in" | "check-out" = "auto") => {
+    setScanMsg("");
+    setScanErr("");
+    setScanBusy(true);
+    try {
+      const row = await scanAttendance(code.trim(), action);
+      const label = row.employee_name || row.employee_id;
+      const verb = row.check_out_at ? "check-out" : "check-in";
+      setScanMsg(`${label} — ${verb} ho gaya (${formatTime(row.check_out_at || row.check_in_at)}).`);
+      await load();
+    } catch (err) {
+      if (err instanceof ApiError && err.code === "DUPLICATE_CHECKIN") {
+        setScanErr("Aaj ka check-in pehle hi ho chuka hai.");
+      } else if (err instanceof ApiError && (err.code === "INVALID_CHECKOUT" || err.code === "ALREADY_CHECKED_OUT")) {
+        setScanErr("Check-out nahi ho saka — pehle check-in zaroori hai ya aaj ka check-out ho chuka hai.");
+      } else {
+        setScanErr(err instanceof ApiError ? err.message : "Scan fail ho gaya.");
+      }
+    } finally {
+      setScanBusy(false);
+    }
+  };
+
+  const stopScanner = async () => {
+    const s = scannerRef.current;
+    scannerRef.current = null;
+    setScanOpen(false);
+    if (s) {
+      try {
+        await s.stop();
+        s.clear();
+      } catch {
+        /* ignore */
+      }
+    }
+  };
+
+  const startScanner = async () => {
+    setScanMsg("");
+    setScanErr("");
+    setScanOpen(true);
+    try {
+      const { Html5Qrcode } = await import("html5-qrcode");
+      const scanner = new Html5Qrcode("qr-reader");
+      scannerRef.current = scanner;
+      await scanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 230, height: 230 } },
+        async (decoded: string) => {
+          const s = scannerRef.current;
+          scannerRef.current = null;
+          setScanOpen(false);
+          if (s) {
+            try {
+              await s.stop();
+              s.clear();
+            } catch {
+              /* ignore */
+            }
+          }
+          await handleScan(decoded);
+        },
+        () => undefined,
+      );
+    } catch {
+      scannerRef.current = null;
+      setScanOpen(false);
+      setScanErr("Camera start nahi hui — permission check karo, ya employee code manually enter karo.");
+    }
+  };
+
+  const handleManual = async () => {
+    if (!manualCode.trim()) {
+      setScanErr("Employee code likho (jaise EMP-0001).");
+      return;
+    }
+    await handleScan(manualCode.trim(), manualAction);
+  };
+
   const presentToday = rows.filter((r) => r.status === "present").length;
   const lateToday = rows.filter((r) => r.is_late).length;
   const absentToday = rows.filter((r) => r.status === "absent").length;
@@ -238,6 +339,46 @@ export default function AttendancePage() {
 
               {actionMsg && <p className="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">{actionMsg}</p>}
               {actionError && <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{actionError}</p>}
+
+              <div className="mt-6 rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
+                <h2 className="flex items-center gap-2 font-display text-lg font-bold text-charcoal">
+                  <ScanLine className="h-5 w-5 text-gold" /> {t("scanAttendance")}
+                </h2>
+                <p className="mt-1 text-sm text-ink/60">{t("scanHint")}</p>
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <button type="button" onClick={() => void startScanner()} disabled={scanOpen} className={goldButtonClass}>
+                    <Camera className="h-4 w-4" /> {t("startScanner")}
+                  </button>
+                  {scanOpen && (
+                    <button type="button" onClick={() => void stopScanner()} className={secondaryButtonClass}>
+                      <Square className="h-4 w-4" /> {t("stopScanner")}
+                    </button>
+                  )}
+                </div>
+                <div id="qr-reader" className={scanOpen ? "mt-4 overflow-hidden rounded-xl" : "hidden"} />
+                <div className="mt-5 border-t border-stone-line pt-4">
+                  <p className="text-sm font-semibold text-charcoal">{t("manualScan")}</p>
+                  <div className="mt-2 flex flex-wrap items-end gap-3">
+                    <div>
+                      <label htmlFor="manual_code" className={labelClass}>{t("employeeCode")}</label>
+                      <input id="manual_code" value={manualCode} onChange={(e) => setManualCode(e.target.value.toUpperCase())} placeholder="EMP-0001" className={inputClass} />
+                    </div>
+                    <div>
+                      <label htmlFor="manual_action" className={labelClass}>{t("scanAction")}</label>
+                      <select id="manual_action" value={manualAction} onChange={(e) => setManualAction(e.target.value as "auto" | "check-in" | "check-out")} className={inputClass}>
+                        <option value="auto">Auto</option>
+                        <option value="check-in">Check In</option>
+                        <option value="check-out">Check Out</option>
+                      </select>
+                    </div>
+                    <button type="button" onClick={() => void handleManual()} disabled={scanBusy || !manualCode.trim()} className={goldButtonClass}>
+                      {scanBusy ? "…" : t("markToday")}
+                    </button>
+                  </div>
+                </div>
+                {scanMsg && <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">{scanMsg}</p>}
+                {scanErr && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{scanErr}</p>}
+              </div>
 
               <div className="mt-6 rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
                 <h2 className="font-display text-lg font-bold text-charcoal">Mark Attendance (Manager)</h2>

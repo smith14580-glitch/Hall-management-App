@@ -103,6 +103,17 @@ const EN: Dict = {
   openBooking: "Open full booking",
   paymentHistory: "Payment History",
   noPayments: "No payments recorded.",
+  salary: "Salary",
+  salaryHistory: "Salary History",
+  markPaid: "Mark Paid",
+  attendanceBadge: "Attendance Badge",
+  scanAttendance: "Scan Attendance (QR)",
+  scanHint: "Employee ka QR badge scan karo ya employee code manual enter karo — attendance khud mark ho jayegi (check-in / check-out auto).",
+  startScanner: "Start Scanner",
+  stopScanner: "Stop Scanner",
+  manualScan: "Manual Entry",
+  employeeCode: "Employee Code",
+  scanAction: "Action",
 };
 
 const UR: Dict = {
@@ -196,6 +207,17 @@ const UR: Dict = {
   openBooking: "پوری بکنگ کھولیں",
   paymentHistory: "ادائیگیوں کی تاریخ",
   noPayments: "کوئی ادائیگی درج نہیں ہے۔",
+  salary: "تنخواہ",
+  salaryHistory: "تنخواہ کی تاریخ",
+  markPaid: "ادا شدہ نشان زد کریں",
+  attendanceBadge: "حاضری بیج",
+  scanAttendance: "حاضری اسکین کریں (QR)",
+  scanHint: "ملازم کا QR بیج اسکین کریں یا ملازم کوڈ دستی طور پر لکھیں — حاضری خود درج ہو جائے گی (چیک اِن / چیک آؤٹ خودکار)۔",
+  startScanner: "اسکینر شروع کریں",
+  stopScanner: "اسکینر بند کریں",
+  manualScan: "دستی درج",
+  employeeCode: "ملازم کوڈ",
+  scanAction: "کارروائی",
 };
 
 const DICTS: Record<Language, Dict> = { en: EN, ur: UR };

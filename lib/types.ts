@@ -192,6 +192,21 @@ export interface AuditLog {
   created_at: string;
 }
 
+export interface SalaryRecord {
+  id: string;
+  employee_id: string;
+  employee_name?: string | null;
+  employee_code?: string | null;
+  month: string;
+  base_amount: number;
+  paid_amount: number;
+  balance: number;
+  payment_date?: string | null;
+  status: "pending" | "partial" | "paid";
+  notes?: string | null;
+  created_at?: string;
+}
+
 export const EVENT_TYPES = [
   "Wedding",
   "Barat",

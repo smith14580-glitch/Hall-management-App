@@ -20,6 +20,7 @@ import type {
   Payment,
   Pricing,
   RevenuePoint,
+  SalaryRecord,
   SettingItem,
   TableAllocation,
   User,
@@ -698,6 +699,80 @@ export async function markAttendance(body: Record<string, unknown>): Promise<Att
     });
   }
   return apiFetch<AttendanceRow>("/attendance/mark", { method: "POST", body });
+}
+
+export async function scanAttendance(
+  employeeCode: string,
+  action: "auto" | "check-in" | "check-out" = "auto",
+): Promise<AttendanceRow> {
+  requireLogin();
+  if (demoActive()) {
+    return sample({
+      id: `att-${Date.now()}`,
+      employee_id: "emp-3",
+      employee_name: "Imran Khan",
+      attendance_date: new Date().toISOString().slice(0, 10),
+      status: "present",
+      check_in_at: new Date().toISOString(),
+      check_out_at: null,
+      is_late: false,
+      working_minutes: null,
+    });
+  }
+  return apiFetch<AttendanceRow>("/attendance/scan", {
+    method: "POST",
+    body: { employee_code: employeeCode, action },
+  });
+}
+
+// ---------- Salary records ----------
+export async function fetchEmployeeSalary(employeeId: string, month?: string): Promise<SalaryRecord[]> {
+  if (demoActive()) return sample([]);
+  const q = month ? `?month=${encodeURIComponent(month)}` : "";
+  return asArray<SalaryRecord>(await apiFetch<unknown>(`/employees/${employeeId}/salary${q}`));
+}
+
+export async function saveEmployeeSalary(
+  employeeId: string,
+  body: Record<string, unknown>,
+): Promise<SalaryRecord> {
+  requireLogin();
+  if (demoActive()) {
+    return sample({
+      id: `sal-${Date.now()}`,
+      employee_id: employeeId,
+      month: String(body.month || ""),
+      base_amount: Number(body.base_amount || 0),
+      paid_amount: Number(body.paid_amount || 0),
+      balance: Number(body.base_amount || 0) - Number(body.paid_amount || 0),
+      payment_date: (body.payment_date as string) || null,
+      status: "pending",
+      notes: (body.notes as string) || null,
+    });
+  }
+  return apiFetch<SalaryRecord>(`/employees/${employeeId}/salary`, { method: "POST", body });
+}
+
+export async function updateSalary(recordId: string, body: Record<string, unknown>): Promise<SalaryRecord> {
+  requireLogin();
+  if (demoActive()) {
+    return sample({
+      id: recordId,
+      employee_id: "emp-3",
+      month: String(body.month || ""),
+      base_amount: Number(body.base_amount || 0),
+      paid_amount: Number(body.paid_amount || 0),
+      balance: 0,
+      status: "paid",
+    });
+  }
+  return apiFetch<SalaryRecord>(`/salary/${recordId}`, { method: "PATCH", body });
+}
+
+export async function fetchAllSalary(month?: string): Promise<SalaryRecord[]> {
+  if (demoActive()) return sample([]);
+  const q = month ? `?month=${encodeURIComponent(month)}` : "";
+  return asArray<SalaryRecord>(await apiFetch<unknown>(`/salary${q}`));
 }
 
 // ---------- Reports (§4.10) ----------
