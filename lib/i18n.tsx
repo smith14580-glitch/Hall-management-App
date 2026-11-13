@@ -21,6 +21,7 @@ const EN: Dict = {
   payments: "Payments",
   tables: "Tables",
   employees: "Employees",
+  quotations: "WhatsApp Quotations",
   attendance: "Attendance",
   reports: "Reports",
   settings: "Settings",

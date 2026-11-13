@@ -19,6 +19,8 @@ import type {
   HallTable,
   Payment,
   Pricing,
+  Quotation,
+  QuotationTemplate,
   RevenuePoint,
   SalaryRecord,
   SettingItem,
@@ -32,6 +34,8 @@ import {
   SAMPLE_EMPLOYEES,
   SAMPLE_HALL,
   SAMPLE_PAYMENTS,
+  SAMPLE_QUOTATION_TEMPLATE,
+  SAMPLE_QUOTATIONS,
   SAMPLE_REVENUE,
   SAMPLE_SUMMARY,
   SAMPLE_TABLES,
@@ -773,6 +777,106 @@ export async function fetchAllSalary(month?: string): Promise<SalaryRecord[]> {
   if (demoActive()) return sample([]);
   const q = month ? `?month=${encodeURIComponent(month)}` : "";
   return asArray<SalaryRecord>(await apiFetch<unknown>(`/salary${q}`));
+}
+
+// ---------- Quotations (WhatsApp) ----------
+export async function fetchQuotationTemplate(): Promise<{ template: QuotationTemplate; hall: { id: string; name: string } | null }> {
+  if (demoActive()) {
+    return sample({
+      template: SAMPLE_QUOTATION_TEMPLATE,
+      hall: { id: "hall-1", name: "MARQUE ONE" },
+    });
+  }
+  const res = await apiFetch<{ template: QuotationTemplate; hall: { id: string; name: string } | null }>("/quotations/template");
+  return res;
+}
+
+export async function updateQuotationTemplate(body: Record<string, unknown>): Promise<QuotationTemplate> {
+  requireLogin();
+  if (demoActive()) {
+    return sample({ ...SAMPLE_QUOTATION_TEMPLATE, ...body } as QuotationTemplate);
+  }
+  const res = await apiFetch<{ template?: QuotationTemplate } & QuotationTemplate>("/quotations/template", { method: "PUT", body });
+  return (res.template ?? res) as QuotationTemplate;
+}
+
+export async function createQuotation(body: Record<string, unknown>): Promise<Quotation> {
+  requireLogin();
+  if (demoActive()) {
+    const q: Quotation = {
+      id: `qt-${Date.now()}`,
+      enquiry_no: `QT-2026-${String(SAMPLE_QUOTATIONS.length + 1).padStart(4, "0")}`,
+      client_name: String(body.client_name || ""),
+      client_phone: String(body.client_phone || ""),
+      source: (body.source as string) || null,
+      event_type: (body.event_type as string) || null,
+      event_date: (body.event_date as string) || null,
+      slot: (body.slot as "day" | "night") || null,
+      guest_count: body.guest_count ? Number(body.guest_count) : null,
+      hall_id: "hall-1",
+      hall_name: "MARQUE ONE",
+      package_price: body.slot === "day" ? 150000 : 300000,
+      advance_percent: 50,
+      message_body: "Demo quotation message",
+      status: "draft",
+      valid_until: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+      created_at: new Date().toISOString(),
+    };
+    q.whatsapp_url = `https://wa.me/${normalizePhone(String(body.client_phone || ""))}?text=${encodeURIComponent(q.message_body || "")}`;
+    return sample(q);
+  }
+  return apiFetch<Quotation>("/quotations", { method: "POST", body });
+}
+
+export async function fetchQuotations(params?: { search?: string; status?: string }): Promise<Quotation[]> {
+  if (demoActive()) {
+    let rows = [...SAMPLE_QUOTATIONS];
+    if (params?.status) rows = rows.filter((r) => r.status === params.status);
+    if (params?.search) {
+      const q = params.search.toLowerCase();
+      rows = rows.filter(
+        (r) =>
+          r.client_name.toLowerCase().includes(q) ||
+          r.client_phone.includes(q) ||
+          r.enquiry_no.toLowerCase().includes(q),
+      );
+    }
+    return sample(rows);
+  }
+  const qs = new URLSearchParams();
+  if (params?.search) qs.set("search", params.search);
+  if (params?.status) qs.set("status", params.status);
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  return asArray<Quotation>(await apiFetch<unknown>(`/quotations${suffix}`));
+}
+
+export async function fetchQuotation(id: string): Promise<Quotation> {
+  if (demoActive()) {
+    const found = SAMPLE_QUOTATIONS.find((q) => q.id === id);
+    if (found) return sample(found);
+  }
+  return apiFetch<Quotation>(`/quotations/${id}`);
+}
+
+export async function markQuotationSent(id: string): Promise<Quotation> {
+  requireLogin();
+  if (demoActive()) {
+    const found = SAMPLE_QUOTATIONS.find((q) => q.id === id);
+    if (found) {
+      found.status = "sent";
+      found.sent_at = new Date().toISOString();
+      return sample(found);
+    }
+  }
+  return apiFetch<Quotation>(`/quotations/${id}/sent`, { method: "PATCH" });
+}
+
+export function normalizePhone(phone: string): string {
+  let p = phone.trim().replace(/\s+/g, "").replace(/-/g, "").replace(/\(/g, "").replace(/\)/g, "");
+  if (p.startsWith("+")) p = p.slice(1);
+  if (p.startsWith("0")) p = "92" + p.slice(1);
+  if (p.startsWith("00")) p = p.slice(2);
+  return p;
 }
 
 // ---------- Reports (§4.10) ----------

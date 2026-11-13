@@ -13,6 +13,7 @@ import {
   LogIn,
   LogOut,
   Menu,
+  MessageSquare,
   Settings,
   Users,
   Wallet,
@@ -38,6 +39,7 @@ const NAV: NavItem[] = [
   { href: "/payments", labelKey: "payments", icon: <Wallet className="h-5 w-5" />, managerOnly: true },
   { href: "/tables", labelKey: "tables", icon: <Building2 className="h-5 w-5" />, managerOnly: true },
   { href: "/employees", labelKey: "employees", icon: <Users className="h-5 w-5" />, managerOnly: true },
+  { href: "/quotations", labelKey: "quotations", icon: <MessageSquare className="h-5 w-5" />, managerOnly: true },
   { href: "/attendance", labelKey: "attendance", icon: <Clock className="h-5 w-5" />, managerOnly: false },
   { href: "/reports", labelKey: "reports", icon: <BarChart3 className="h-5 w-5" />, managerOnly: true },
   { href: "/settings", labelKey: "settings", icon: <Settings className="h-5 w-5" />, managerOnly: true },
@@ -53,6 +55,7 @@ const MANAGER_PREFIXES = [
   "/payments",
   "/tables",
   "/employees",
+  "/quotations",
   "/reports",
   "/settings",
 ];

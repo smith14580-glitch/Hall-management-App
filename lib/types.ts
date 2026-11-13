@@ -183,15 +183,6 @@ export interface SettingItem {
   description?: string | null;
 }
 
-export interface AuditLog {
-  id: string;
-  user_id?: string | null;
-  action: string;
-  entity_type: string;
-  entity_id?: string | null;
-  created_at: string;
-}
-
 export interface SalaryRecord {
   id: string;
   employee_id: string;
@@ -205,6 +196,50 @@ export interface SalaryRecord {
   status: "pending" | "partial" | "paid";
   notes?: string | null;
   created_at?: string;
+}
+
+export interface AuditLog {
+  id: string;
+  user_id?: string | null;
+  action: string;
+  entity_type: string;
+  entity_id?: string | null;
+  created_at: string;
+}
+
+export interface QuotationTemplate {
+  template_body: string;
+  facilities?: string | null;
+  chargeable_items?: string | null;
+  policies?: string | null;
+  office_timings?: string | null;
+  manager_name?: string | null;
+  manager_phone?: string | null;
+  location_link?: string | null;
+  validity_days: number;
+  updated_at?: string | null;
+}
+
+export interface Quotation {
+  id: string;
+  enquiry_no: string;
+  client_name: string;
+  client_phone: string;
+  source?: string | null;
+  event_type?: string | null;
+  event_date?: string | null;
+  slot?: "day" | "night" | null;
+  guest_count?: number | null;
+  hall_id?: string | null;
+  hall_name?: string | null;
+  package_price?: number | null;
+  advance_percent?: number | null;
+  message_body?: string | null;
+  status: "draft" | "sent";
+  valid_until?: string | null;
+  sent_at?: string | null;
+  created_at?: string | null;
+  whatsapp_url?: string | null;
 }
 
 export const EVENT_TYPES = [

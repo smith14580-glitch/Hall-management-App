@@ -13,6 +13,8 @@ import type {
   Hall,
   HallTable,
   Payment,
+  Quotation,
+  QuotationTemplate,
   RevenuePoint,
 } from "./types";
 
@@ -87,6 +89,102 @@ export const SAMPLE_SUMMARY: DashboardSummary = {
   todays_attendance: 3,
 };
 
+export const SAMPLE_QUOTATION_TEMPLATE: QuotationTemplate = {
+  template_body: `بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
+
+Dear {{client_name}},
+
+Welcome to MARQUE ONE, where extraordinary moments become lasting memories.
+We are thrilled to partner with you in crafting an unforgettable celebration.
+Here are your event details:
+- Enquiry Date: {{enquiry_date}}
+- Enquiry #: {{enquiry_no}}
+- Client Reach: {{source}}
+- Event Type: {{event_type}}
+- Event Date: {{event_date}}
+- Guest Count: {{guest_count}}
+- Banquet Hall: {{hall_name}}
+- Package Price: {{package_price}} ({{slot}} slot)
+- Advance Required: {{advance_percent}}% to confirm your booking
+
+Event Timings:
+- Day Slot: 12:00 PM – 4:00 PM
+- Night Slot: 7:00 PM – 11:00 PM
+
+Venue Facilities & Setup:
+{{facilities}}
+
+Chargeable Items:
+{{chargeable_items}}
+
+For Confirmation of Booking:
+- A {{advance_percent}}% advance deposit is required to secure your booking. Payment can be made via cash or online bank transfer.
+
+Advance Amount Refund & Adjustment Policy:
+{{policies}}
+
+Office Timings: {{office_timings}}
+
+Should you require further information or assistance, please contact your dedicated Event Manager, {{manager_name}} — {{manager_phone}}.
+
+Location: {{location_link}}
+
+Best Regards,
+MARQUE ONE
+
+Note: This quotation is valid for 7 days (until {{valid_until}}). After that, rates may change.`,
+  facilities: "- Fully air-conditioned, climate-controlled hall\n- Beautifully decorated stage\n- Bridal room\n- Premium chairs and tables\n- Buffet stations\n- Ample parking",
+  chargeable_items: "Cold drinks, mineral water, extra floral work, table service, extra time, etc.",
+  policies: "- Postponement allowed with prevailing rates, advance adjusted.\n- Cancellation on scheduled date: advance non-refundable.",
+  office_timings: "10:00 AM – 6:00 PM",
+  manager_name: "Shahzad",
+  manager_phone: "03272578101",
+  location_link: "https://maps.google.com/?q=MARQUE+ONE",
+  validity_days: 7,
+  updated_at: "2026-11-13T00:00:00Z",
+};
+
+export const SAMPLE_QUOTATIONS: Quotation[] = [
+  {
+    id: "qt-1",
+    enquiry_no: "QT-2026-0001",
+    client_name: "Ahmed Raza",
+    client_phone: "0301-2345678",
+    source: "phone",
+    event_type: "Barat",
+    event_date: "2026-12-14",
+    slot: "night",
+    guest_count: 400,
+    hall_id: "hall-1",
+    hall_name: "MARQUE ONE",
+    package_price: 300000,
+    advance_percent: 50,
+    message_body: "Demo quotation message for Ahmed Raza",
+    status: "sent",
+    valid_until: "2026-11-20",
+    sent_at: "2026-11-13T10:00:00Z",
+    created_at: "2026-11-13T09:30:00Z",
+  },
+  {
+    id: "qt-2",
+    enquiry_no: "QT-2026-0002",
+    client_name: "Ayesha Malik",
+    client_phone: "0322-9876543",
+    source: "walk-in",
+    event_type: "Walima",
+    event_date: "2026-12-20",
+    slot: "day",
+    guest_count: 300,
+    hall_id: "hall-1",
+    hall_name: "MARQUE ONE",
+    package_price: 150000,
+    advance_percent: 50,
+    message_body: "Demo quotation message for Ayesha Malik",
+    status: "draft",
+    valid_until: "2026-11-21",
+    created_at: "2026-11-14T11:00:00Z",
+  },
+];
 export const SAMPLE_REVENUE: RevenuePoint[] = [
   { label: "Jun", revenue: 900000, bookings: 3 },
   { label: "Jul", revenue: 1200000, bookings: 4 },
