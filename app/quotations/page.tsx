@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { MessageSquare, Plus, Search, Send, Settings as SettingsIcon } from "lucide-react";
+import { MessageSquare, Plus, Printer, Search, Send, Settings as SettingsIcon } from "lucide-react";
 import {
   ApiError,
   createQuotation,
@@ -13,6 +13,7 @@ import {
   updateQuotationTemplate,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useToast } from "@/components/toast";
 import { formatDate, todayISO } from "@/lib/format";
 import type { Hall, Quotation, QuotationTemplate } from "@/lib/types";
 import {
@@ -86,6 +87,7 @@ function isExpired(validUntil?: string | null) {
 
 export default function QuotationsPage() {
   const { isManager, isDemo } = useAuth();
+  const toast = useToast();
   const [tab, setTab] = useState<"new" | "template">("new");
   const [template, setTemplate] = useState<QuotationTemplate | null>(null);
   const [halls, setHalls] = useState<Hall[]>([]);
@@ -231,6 +233,7 @@ export default function QuotationsPage() {
         window.open(q.whatsapp_url, "_blank", "noopener,noreferrer");
       }
       await markQuotationSent(q.id).catch(() => undefined);
+      toast.success(`${q.enquiry_no} — quotation ready, WhatsApp khul raha hai.`);
       setClientName("");
       setClientPhone("");
       setGuestCount("");
@@ -262,6 +265,7 @@ export default function QuotationsPage() {
       });
       setTemplate(updated);
       setTplMsg("Template save ho gaya.");
+      toast.success("Message template save ho gaya.");
     } catch (err) {
       setTplErr(err instanceof ApiError ? err.message : "Template save nahi hua.");
     } finally {
@@ -507,8 +511,11 @@ export default function QuotationsPage() {
 
       {viewQ && (
         <Modal title={`${viewQ.enquiry_no} — ${viewQ.client_name}`} onClose={() => setViewQ(null)}>
-          <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-lg bg-offwhite p-3 text-xs text-charcoal">{viewQ.message_body || ""}</pre>
-          <div className="mt-4 flex gap-2">
+          <pre className="print-area max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-lg bg-offwhite p-3 text-xs text-charcoal">{viewQ.message_body || ""}</pre>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button type="button" onClick={() => window.print()} className={secondaryButtonClass}>
+              <Printer className="h-4 w-4" /> Print / Save PDF
+            </button>
             <button type="button" onClick={() => resend(viewQ)} className={goldButtonClass}>
               <Send className="h-4 w-4" /> Send on WhatsApp
             </button>

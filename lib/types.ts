@@ -76,6 +76,7 @@ export interface Booking {
   status: BookingStatus;
   created_by?: string;
   cancelled_reason?: string | null;
+  confirmed_at?: string | null;
   completed_at?: string | null;
   created_at?: string;
   updated_at?: string;

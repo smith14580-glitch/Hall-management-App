@@ -23,6 +23,8 @@ import { useAuth } from "@/lib/auth";
 import { useLanguage } from "@/lib/i18n";
 import { LOGIN_REQUIRED_EVENT, USE_SAMPLE_DATA } from "@/lib/api";
 import { InstallAppButton } from "@/components/InstallAppButton";
+import { GlobalSearch } from "@/components/global-search";
+import { NotificationsBell } from "@/components/notifications-bell";
 
 interface NavItem {
   href: string;
@@ -239,6 +241,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             MARQUE <span className="text-gold">ONE</span>
           </p>
           <div className="ms-auto flex items-center gap-2 sm:gap-3">
+            <GlobalSearch />
+            <NotificationsBell />
             <InstallAppButton />
             <LanguageToggle />
             {user ? (

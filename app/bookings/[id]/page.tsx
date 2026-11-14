@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Receipt, Trash2 } from "lucide-react";
+import { ArrowLeft, MessageSquare, Printer, Receipt, Trash2 } from "lucide-react";
 import {
   ApiError,
   allocateTables,
@@ -15,11 +15,13 @@ import {
   fetchBookingPayments,
   fetchBookingTables,
   fetchTables,
+  normalizePhone,
   recordPayment,
   voidPayment,
 } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
-import { formatDate, formatPKR, todayISO } from "@/lib/format";
+import { useToast } from "@/components/toast";
+import { formatDate, formatDateTime, formatPKR, todayISO } from "@/lib/format";
 import { PAYMENT_METHODS, type Booking, type HallTable, type Payment, type TableAllocation } from "@/lib/types";
 import {
   Badge,
@@ -38,6 +40,7 @@ import {
   secondaryButtonClass,
 } from "@/components/ui";
 import { ReceiptModal } from "@/components/receipt";
+import { BookingDocument } from "@/components/booking-document";
 
 const paymentSchema = z.object({
   amount: z.coerce.number().positive("Amount 0 se zyada hona chahiye."),
@@ -54,6 +57,7 @@ export default function BookingDetailPage() {
   const id = params.id;
   const router = useRouter();
   const { t } = useLanguage();
+  const toast = useToast();
   const [booking, setBooking] = useState<Booking | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [tables, setTables] = useState<HallTable[]>([]);
@@ -65,6 +69,7 @@ export default function BookingDetailPage() {
   const [receipt, setReceipt] = useState<Payment | null>(null);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
+  const [showDocument, setShowDocument] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [selectedTables, setSelectedTables] = useState<string[]>([]);
   const [tableBusy, setTableBusy] = useState(false);
@@ -116,6 +121,9 @@ export default function BookingDetailPage() {
       const updated = await bookingAction(id, action, body);
       setBooking(updated);
       if (action === "cancel") setShowCancel(false);
+      toast.success(
+        action === "confirm" ? "Booking confirm ho gayi." : action === "complete" ? "Booking complete ho gayi." : "Booking cancel ho gayi.",
+      );
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : "Action fail ho gaya — dobara try karo.");
     } finally {
@@ -136,6 +144,7 @@ export default function BookingDetailPage() {
       setPayments((prev) => [created, ...prev]);
       setShowPaymentForm(false);
       reset({ payment_date: todayISO(), method: "cash", amount: 0, reference: "", notes: "" });
+      toast.success(`Payment recorded — ${formatPKR(created.amount)}`);
       await load();
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : "Payment save nahi hui.");
@@ -147,6 +156,7 @@ export default function BookingDetailPage() {
     if (!reason) return;
     try {
       await voidPayment(paymentId, reason);
+      toast.success("Payment void ho gayi.");
       await load();
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : "Void nahi ho saka.");
@@ -184,6 +194,31 @@ export default function BookingDetailPage() {
     return sum + (t?.capacity || a.capacity || 0);
   }, 0);
 
+  const timeline: Array<{ at: string; label: string; detail?: string | null }> = [
+    { at: booking.created_at || "", label: "Booking created", detail: null },
+    ...(booking.confirmed_at ? [{ at: booking.confirmed_at, label: "Booking confirmed", detail: null }] : []),
+    ...payments
+      .filter((p) => !p.is_voided)
+      .map((p) => ({
+        at: p.created_at || `${p.payment_date}T00:00:00`,
+        label: `Payment received — ${formatPKR(p.amount)}`,
+        detail: p.method.replace("_", " "),
+      })),
+    ...(booking.completed_at ? [{ at: booking.completed_at, label: "Event completed", detail: null }] : []),
+    ...(booking.status === "cancelled"
+      ? [{ at: booking.updated_at || "", label: "Booking cancelled", detail: booking.cancelled_reason || null }]
+      : []),
+  ]
+    .filter((e) => e.at)
+    .sort((a, b) => b.at.localeCompare(a.at));
+
+  const reminderUrl = (() => {
+    if (!booking.customer_phone) return "";
+    const phone = normalizePhone(booking.customer_phone);
+    const msg = `Dear ${booking.customer_name || "Client"}, reminder for your ${booking.event_type} on ${formatDate(booking.event_date)} at MARQUE ONE. Total: ${formatPKR(booking.total_price)}, received: ${formatPKR(booking.amount_paid)}, remaining: ${formatPKR(booking.balance_amount)}. Please clear the balance before the event. — MARQUE ONE`;
+    return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+  })();
+
   return (
     <div>
       <button type="button" onClick={() => router.push("/bookings")} className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-gold-dark hover:underline">
@@ -209,6 +244,9 @@ export default function BookingDetailPage() {
                 {t("cancelBooking")}
               </button>
             )}
+            <button type="button" onClick={() => setShowDocument(true)} className={secondaryButtonClass}>
+              <Printer className="h-4 w-4" /> Print / PDF
+            </button>
           </>
         }
       />
@@ -243,6 +281,23 @@ export default function BookingDetailPage() {
                 <div><dt className="text-ink/50">Cancel Reason</dt><dd className="font-semibold text-red-700">{booking.cancelled_reason}</dd></div>
               )}
             </dl>
+          </div>
+
+          {/* Timeline */}
+          <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
+            <h2 className="font-display text-lg font-bold text-charcoal">Booking Timeline</h2>
+            <ol className="mt-4 space-y-4">
+              {timeline.map((event, i) => (
+                <li key={`${event.label}-${i}`} className="flex gap-3">
+                  <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-gold ring-4 ring-gold-light" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-charcoal">{event.label}</p>
+                    {event.detail && <p className="text-xs capitalize text-ink/60">{event.detail}</p>}
+                    <p className="mt-0.5 text-[11px] text-ink/40">{formatDateTime(event.at)}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
           </div>
 
           {/* Payments */}
@@ -386,6 +441,16 @@ export default function BookingDetailPage() {
               <dd className="font-display text-lg font-bold text-gold">{formatPKR(booking.balance_amount)}</dd>
             </div>
           </dl>
+          {booking.balance_amount > 0 && reminderUrl && (
+            <a
+              href={reminderUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-gold px-3 py-2 text-center text-sm font-semibold text-charcoal hover:bg-gold-dark hover:text-white"
+            >
+              <MessageSquare className="h-4 w-4" /> WhatsApp Payment Reminder
+            </a>
+          )}
           <p className="mt-5 text-xs leading-relaxed text-white/50">
             Payment status is derived from recorded payments only — a booking is
             never marked Fully Paid by hand.
@@ -394,6 +459,18 @@ export default function BookingDetailPage() {
       </div>
 
       {receipt && <ReceiptModal payment={receipt} booking={booking} onClose={() => setReceipt(null)} />}
+
+      {showDocument && (
+        <Modal title="Booking Confirmation" onClose={() => setShowDocument(false)}>
+          <BookingDocument booking={booking} />
+          <div className="mt-4 flex gap-2">
+            <button type="button" onClick={() => window.print()} className={goldButtonClass}>
+              <Printer className="h-4 w-4" /> Print / Save PDF
+            </button>
+            <button type="button" onClick={() => setShowDocument(false)} className={secondaryButtonClass}>Close</button>
+          </div>
+        </Modal>
+      )}
 
       {showCancel && (
         <Modal title="Cancel Booking" onClose={() => setShowCancel(false)}>

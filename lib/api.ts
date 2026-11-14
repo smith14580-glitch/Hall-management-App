@@ -8,6 +8,7 @@
 // clearly-labelled sample data (lib/sample.ts) and the UI shows a banner.
 
 import type {
+  AppNotification,
   AttendanceRow,
   AvailabilityDay,
   Booking,
@@ -877,6 +878,56 @@ export function normalizePhone(phone: string): string {
   if (p.startsWith("0")) p = "92" + p.slice(1);
   if (p.startsWith("00")) p = p.slice(2);
   return p;
+}
+
+// ---------- Paginated bookings ----------
+export interface PaginatedBookings {
+  items: Booking[];
+  total: number;
+}
+
+export async function fetchBookingsPage(
+  filters: BookingFilters & { skip?: number; limit?: number } = {},
+): Promise<PaginatedBookings> {
+  const { skip = 0, limit = 20, ...rest } = filters;
+  if (demoActive()) {
+    const rows = await fetchBookings(rest);
+    return { items: rows.slice(skip, skip + limit), total: rows.length };
+  }
+  const params = new URLSearchParams();
+  params.set("skip", String(skip));
+  params.set("limit", String(limit));
+  Object.entries(rest).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== "") params.set(k, String(v));
+  });
+  const res = await apiFetch<{ items: Booking[]; total: number }>(`/bookings?${params.toString()}`);
+  return { items: res.items ?? [], total: res.total ?? 0 };
+}
+
+// ---------- Notifications ----------
+export async function fetchUnreadNotificationCount(): Promise<number> {
+  if (demoActive()) return sample(0);
+  const res = await apiFetch<{ count: number }>("/notifications/unread-count");
+  return res.count ?? 0;
+}
+
+export async function fetchNotifications(unreadOnly = false): Promise<AppNotification[]> {
+  if (demoActive()) return sample([]);
+  const res = await apiFetch<{ items: AppNotification[]; total: number }>(
+    `/notifications?unread_only=${unreadOnly ? "true" : "false"}&limit=50`,
+  );
+  return res.items ?? [];
+}
+
+export async function markNotificationRead(id: string): Promise<AppNotification> {
+  requireLogin();
+  return apiFetch<AppNotification>(`/notifications/${id}/read`, { method: "POST" });
+}
+
+export async function markAllNotificationsRead(): Promise<number> {
+  requireLogin();
+  const res = await apiFetch<{ count: number }>("/notifications/read-all", { method: "POST" });
+  return res.count ?? 0;
 }
 
 // ---------- Reports (§4.10) ----------

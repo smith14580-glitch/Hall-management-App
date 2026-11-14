@@ -5,6 +5,7 @@ import { AuthProvider } from "@/lib/auth";
 import { LanguageProvider } from "@/lib/i18n";
 import { AppShell } from "@/components/layout";
 import { RegisterSW } from "@/components/RegisterSW";
+import { ToastProvider } from "@/components/toast";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-body", display: "swap" });
 const playfair = Playfair_Display({
@@ -52,7 +53,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <RegisterSW />
         <LanguageProvider>
           <AuthProvider>
-            <AppShell>{children}</AppShell>
+            <ToastProvider>
+              <AppShell>{children}</AppShell>
+            </ToastProvider>
           </AuthProvider>
         </LanguageProvider>
       </body>
