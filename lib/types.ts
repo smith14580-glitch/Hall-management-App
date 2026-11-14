@@ -258,6 +258,7 @@ export const PAYMENT_METHODS = [
   { value: "jazzcash", label: "JazzCash" },
   { value: "easypaisa", label: "EasyPaisa" },
   { value: "cheque", label: "Cheque" },
+  { value: "advance", label: "Advance" },
   { value: "other", label: "Other" },
 ] as const;
 

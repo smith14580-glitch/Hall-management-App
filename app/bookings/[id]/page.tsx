@@ -374,15 +374,15 @@ export default function BookingDetailPage() {
               <dd className="font-display text-lg font-bold">{formatPKR(booking.total_price)}</dd>
             </div>
             <div className="flex justify-between border-b border-white/10 pb-3">
-              <dt className="text-white/70">Agreed Advance</dt>
+              <dt className="text-white/70">Advance Agreed</dt>
               <dd className="font-semibold">{formatPKR(booking.advance_amount)}</dd>
             </div>
             <div className="flex justify-between border-b border-white/10 pb-3">
-              <dt className="text-white/70">Amount Paid</dt>
+              <dt className="text-white/70">Received (incl. advance)</dt>
               <dd className="font-semibold text-emerald-300">{formatPKR(booking.amount_paid)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-white/70">Balance Due</dt>
+              <dt className="text-white/70">Remaining to Collect</dt>
               <dd className="font-display text-lg font-bold text-gold">{formatPKR(booking.balance_amount)}</dd>
             </div>
           </dl>
