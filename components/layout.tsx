@@ -231,7 +231,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col lg:ps-64">
-        <header className="sticky top-0 z-20 flex min-h-16 items-center gap-3 border-b border-stone-line bg-white px-4 py-3 sm:px-6">
+        <header className="sticky top-0 z-20 flex min-h-14 items-center gap-2 border-b border-stone-line bg-white px-3 py-2 sm:px-6 sm:py-3 sm:min-h-16 sm:gap-3">
           <button
             type="button"
             className="rounded-lg p-2 text-charcoal hover:bg-offwhite lg:hidden"
@@ -240,7 +240,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <Menu className="h-6 w-6" />
           </button>
-          <p className="font-display text-lg font-bold text-charcoal lg:hidden">
+          <p className="font-display text-base font-bold text-charcoal sm:text-lg lg:hidden">
             MARQUE <span className="text-gold">ONE</span>
           </p>
           <div className="ms-auto flex items-center gap-2 sm:gap-3">

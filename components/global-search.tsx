@@ -72,7 +72,7 @@ export function GlobalSearch() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-stone-line bg-white px-2.5 py-2 text-sm font-semibold text-ink/60 hover:bg-offwhite"
+        className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-stone-line bg-white px-2 py-1.5 text-sm font-semibold text-ink/60 hover:bg-offwhite sm:min-h-10 sm:px-2.5 sm:py-2"
         aria-label="Global search"
       >
         <Search className="h-4 w-4" />

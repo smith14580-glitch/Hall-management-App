@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { MessageSquare, Plus, Printer, Search, Send, Settings as SettingsIcon } from "lucide-react";
 import {
   ApiError,
@@ -88,6 +89,7 @@ function isExpired(validUntil?: string | null) {
 export default function QuotationsPage() {
   const { isManager, isDemo } = useAuth();
   const toast = useToast();
+  const router = useRouter();
   const [tab, setTab] = useState<"new" | "template">("new");
   const [template, setTemplate] = useState<QuotationTemplate | null>(null);
   const [halls, setHalls] = useState<Hall[]>([]);
@@ -509,20 +511,23 @@ export default function QuotationsPage() {
         </div>
       )}
 
-      {viewQ && (
-        <Modal title={`${viewQ.enquiry_no} — ${viewQ.client_name}`} onClose={() => setViewQ(null)}>
-          <pre className="print-area max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-lg bg-offwhite p-3 text-xs text-charcoal">{viewQ.message_body || ""}</pre>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" onClick={() => window.print()} className={secondaryButtonClass}>
-              <Printer className="h-4 w-4" /> Print / Save PDF
-            </button>
-            <button type="button" onClick={() => resend(viewQ)} className={goldButtonClass}>
-              <Send className="h-4 w-4" /> Send on WhatsApp
-            </button>
-            <button type="button" onClick={() => setViewQ(null)} className={secondaryButtonClass}>Close</button>
-          </div>
-        </Modal>
-      )}
+{viewQ && (
+            <Modal title={`${viewQ.enquiry_no} — ${viewQ.client_name}`} onClose={() => setViewQ(null)}>
+              <pre className="print-area max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-lg bg-offwhite p-3 text-xs text-charcoal">{viewQ.message_body || ""}</pre>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button type="button" onClick={() => window.print()} className={secondaryButtonClass}>
+                  <Printer className="h-4 w-4" /> Print / Save PDF
+                </button>
+                <button type="button" onClick={() => router.push(`/bookings/new?client_name=${encodeURIComponent(viewQ.client_name)}&client_phone=${encodeURIComponent(viewQ.client_phone)}&event_type=${encodeURIComponent(String(viewQ.event_type ?? ""))}&event_date=${encodeURIComponent(String(viewQ.event_date ?? ""))}&slot=${viewQ.slot || "day"}&guest_count=${viewQ.guest_count || ""}&hall_name=${viewQ.hall_name || "MARQUE ONE"}&advance_percent=${String(viewQ.advance_percent ?? 50)}`)} className={goldButtonClass}>
+                  <MessageSquare className="h-4 w-4" /> Convert to Booking
+                </button>
+                <button type="button" onClick={() => resend(viewQ)} className={goldButtonClass}>
+                  <Send className="h-4 w-4" /> Send on WhatsApp
+                </button>
+                <button type="button" onClick={() => setViewQ(null)} className={secondaryButtonClass}>Close</button>
+              </div>
+            </Modal>
+          )}
     </div>
   );
 }

@@ -433,6 +433,31 @@ export async function checkAvailability(hallId: string, eventDate: string, slot:
   return apiFetch<{ available: boolean; conflicting_booking_code?: string }>(`/availability/check?${q.toString()}`);
 }
 
+export interface PaginatedCustomers {
+  items: Customer[];
+  total: number;
+}
+
+export async function fetchCustomersPage(
+  search = "",
+  skip = 0,
+  limit = 20,
+): Promise<PaginatedCustomers> {
+  if (demoActive()) {
+    const q = search.toLowerCase();
+    const rows = q
+      ? SAMPLE_CUSTOMERS.filter((c) => c.full_name.toLowerCase().includes(q) || c.phone.includes(q))
+      : SAMPLE_CUSTOMERS;
+    return { items: rows.slice(skip, skip + limit), total: rows.length };
+  }
+  const q = new URLSearchParams();
+  if (search) q.set("search", search);
+  q.set("skip", String(skip));
+  q.set("limit", String(limit));
+  const res = await apiFetch<{ items: Customer[]; total: number }>(`/customers?${q.toString()}`);
+  return { items: res.items ?? [], total: res.total ?? 0 };
+}
+
 // ---------- Customers (§4.3) ----------
 export async function fetchCustomers(search = ""): Promise<Customer[]> {
   if (demoActive()) {
