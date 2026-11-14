@@ -228,7 +228,7 @@ export default function DashboardPage() {
               <div className="absolute inset-0 bg-gradient-to-r from-charcoal/90 via-charcoal/45 to-transparent" aria-hidden />
               <div className="relative flex flex-col gap-3 p-6 sm:p-8 lg:p-10">
                 <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-gold">
-                  {heroIsToday ? "AAJ KA EVENT" : "AGLA EVENT"} Â· {heroBooking.slot === "day" ? "DAY" : "NIGHT"} SLOT
+                  {heroIsToday ? "AAJ KA EVENT" : "AGLA EVENT"} · {heroBooking.slot === "day" ? "DAY" : "NIGHT"} SLOT
                 </p>
                 <h2 className="max-w-3xl break-words font-display text-2xl font-bold leading-tight text-white sm:text-3xl lg:text-4xl">
                   {heroBooking.customer_name || "—"} — {heroBooking.event_type},{" "}
@@ -237,7 +237,7 @@ export default function DashboardPage() {
                     : `${shortDate(heroBooking.event_date)}, ${slotClock(heroBooking.slot)}`}
                 </h2>
                 <p className="max-w-2xl text-sm text-white/80 sm:text-base">
-                  {heroBooking.guest_count} guests Â· {heroBooking.tables_required} tables allocated Â· {paymentLine(heroBooking)}
+                  {heroBooking.guest_count} guests · {heroBooking.tables_required} tables allocated · {paymentLine(heroBooking)}
                 </p>
                 {otherToday.length > 0 && (
                   <p className="text-xs font-semibold text-gold-light sm:text-sm">
@@ -392,7 +392,7 @@ export default function DashboardPage() {
                               {b.customer_name || "—"} — {b.event_type}
                             </p>
                             <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-ink/60">
-                              <span>{b.slot === "day" ? t("day") : t("night")} slot Â· {b.guest_count} guests Â·</span>
+                              <span>{b.slot === "day" ? t("day") : t("night")} slot · {b.guest_count} guests ·</span>
                               <Badge tone={bookingStatusTone(b.status)}>{b.status}</Badge>
                             </div>
                           </div>
