@@ -46,6 +46,7 @@ const NAV: NavItem[] = [
   { href: "/expenses", labelKey: "expenses", icon: <ReceiptText className="h-5 w-5" />, managerOnly: true },
   { href: "/attendance", labelKey: "attendance", icon: <Clock className="h-5 w-5" />, managerOnly: false },
   { href: "/reports", labelKey: "reports", icon: <BarChart3 className="h-5 w-5" />, managerOnly: true },
+  { href: "/audit-logs", labelKey: "auditLog", icon: <Clock className="h-5 w-5" />, managerOnly: true },
   { href: "/settings", labelKey: "settings", icon: <Settings className="h-5 w-5" />, managerOnly: true },
 ];
 
