@@ -70,14 +70,14 @@ function paymentLine(b: Booking) {
   const balance = formatPKR(b.balance_amount);
   if (b.payment_status === "fully_paid") return "Advance received, poori payment mil gayi hai";
   if (b.payment_status === "partially_paid") return `Advance received, balance ${balance} event se pehle due hai`;
-  return `Advance abhi due hai â€” ${balance}`;
+  return `Advance abhi due hai — ${balance}`;
 }
 
 function RevenueChart({ points }: { points: RevenuePoint[] }) {
   const max = Math.max(...points.map((p) => p.revenue), 1);
   return (
     <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-line">
-      <h2 className="font-display text-lg font-bold text-charcoal">Revenue â€” last 6 months</h2>
+      <h2 className="font-display text-lg font-bold text-charcoal">Revenue — last 6 months</h2>
       <div className="mt-5 flex h-44 items-end gap-3" role="img" aria-label="Revenue bar chart">
         {points.map((p) => (
           <div key={p.label} className="flex flex-1 flex-col items-center gap-2">
@@ -145,7 +145,7 @@ export default function DashboardPage() {
     return () => window.clearTimeout(id);
   }, [authLoading, isManager, isDemo, load]);
 
-  // Debounced dashboard search (customer, phone, booking code, dateâ€¦).
+  // Debounced dashboard search (customer, phone, booking code, date…).
   useEffect(() => {
     const q = search.trim();
     const id = window.setTimeout(async () => {
@@ -198,7 +198,7 @@ export default function DashboardPage() {
         title={t("dashboard")}
         subtitle={
           user
-            ? `Welcome back, ${user.full_name} â€” aaj ka kaam yahan se dekho.`
+            ? `Welcome back, ${user.full_name} — aaj ka kaam yahan se dekho.`
             : t("demoViewBanner")
         }
         actions={
@@ -231,7 +231,7 @@ export default function DashboardPage() {
                   {heroIsToday ? "AAJ KA EVENT" : "AGLA EVENT"} Â· {heroBooking.slot === "day" ? "DAY" : "NIGHT"} SLOT
                 </p>
                 <h2 className="max-w-3xl break-words font-display text-2xl font-bold leading-tight text-white sm:text-3xl lg:text-4xl">
-                  {heroBooking.customer_name || "â€”"} â€” {heroBooking.event_type},{" "}
+                  {heroBooking.customer_name || "—"} — {heroBooking.event_type},{" "}
                   {heroIsToday
                     ? `aaj ${slotClock(heroBooking.slot)}`
                     : `${shortDate(heroBooking.event_date)}, ${slotClock(heroBooking.slot)}`}
@@ -241,17 +241,17 @@ export default function DashboardPage() {
                 </p>
                 {otherToday.length > 0 && (
                   <p className="text-xs font-semibold text-gold-light sm:text-sm">
-                    Aaj {todaySorted.length} events hain â€” {todaySorted.map((b) => (b.slot === "day" ? "Day 12:00" : "Night 7:00")).join(", ")}
+                    Aaj {todaySorted.length} events hain — {todaySorted.map((b) => (b.slot === "day" ? "Day 12:00" : "Night 7:00")).join(", ")}
                   </p>
                 )}
                 <span className="mt-1 inline-flex items-center gap-2 text-sm font-semibold text-gold">
-                  View booking <span aria-hidden>â†’</span>
+                  View booking <span aria-hidden>→</span>
                 </span>
               </div>
             </Link>
           ) : (
             <div className="mb-6 rounded-xl border-s-4 border-gold bg-gold-light/70 px-4 py-3 text-sm font-semibold text-charcoal ring-1 ring-gold/30">
-              Koi upcoming event nahi hai â€” New Booking se pehli booking banayein.
+              Koi upcoming event nahi hai — New Booking se pehli booking banayein.
             </div>
           )}
 
@@ -271,7 +271,7 @@ export default function DashboardPage() {
             <div className="mb-6 rounded-xl bg-white p-4 shadow-sm ring-1 ring-stone-line">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h2 className="font-display text-base font-bold text-charcoal">
-                  {t("search")}: —{search.trim()}â€
+                  {t("search")}: —{search.trim()}”
                 </h2>
                 <button type="button" onClick={() => setSearch("")} className={secondaryButtonClass}>
                   {t("cancel")}
@@ -303,7 +303,7 @@ export default function DashboardPage() {
                             </Link>
                           </td>
                           <td className="px-3 py-2.5">
-                            <p className="font-medium text-charcoal">{b.customer_name || "â€”"}</p>
+                            <p className="font-medium text-charcoal">{b.customer_name || "—"}</p>
                             <p className="text-xs text-ink/60" dir="ltr">{b.customer_phone || ""}</p>
                           </td>
                           <td className="px-3 py-2.5">{formatDate(b.event_date)}</td>
@@ -389,7 +389,7 @@ export default function DashboardPage() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-semibold text-charcoal">
-                              {b.customer_name || "â€”"} â€” {b.event_type}
+                              {b.customer_name || "—"} — {b.event_type}
                             </p>
                             <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-ink/60">
                               <span>{b.slot === "day" ? t("day") : t("night")} slot Â· {b.guest_count} guests Â·</span>
@@ -413,7 +413,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between border-b border-stone-line px-5 py-4">
               <h2 className="font-display text-lg font-bold text-charcoal">{t("latestBookings")}</h2>
               <Link href="/bookings" className="text-sm font-semibold text-gold-dark hover:underline">
-                {t("view")} â†’
+                {t("view")} →
               </Link>
             </div>
             <div className="overflow-x-auto">
@@ -434,7 +434,7 @@ export default function DashboardPage() {
                       <td className="px-5 py-3 font-semibold text-charcoal">
                         <Link href={`/bookings/${b.id}`} className="hover:underline">{b.booking_code}</Link>
                       </td>
-                      <td className="px-5 py-3">{b.customer_name || "â€”"}</td>
+                      <td className="px-5 py-3">{b.customer_name || "—"}</td>
                       <td className="px-5 py-3">{formatDate(b.event_date)}</td>
                       <td className="px-5 py-3 capitalize">{b.slot}</td>
                       <td className="px-5 py-3">{formatPKR(b.total_price)}</td>
