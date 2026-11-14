@@ -46,6 +46,7 @@ export default function EmployeesPage() {
   const [error, setError] = useState<unknown>(null);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [deactivating, setDeactivating] = useState<Employee | null>(null);
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
   const [fullName, setFullName] = useState("");
@@ -142,13 +143,19 @@ export default function EmployeesPage() {
     }
   };
 
-  const onDeactivate = async (row: Employee) => {
-    if (!window.confirm(`${row.full_name} ko deactivate karna hai? Unka login bhi band ho jayega.`)) return;
+  const onDeactivate = (row: Employee) => {
+    setDeactivating(row);
+  };
+
+  const confirmDeactivate = async () => {
+    if (!deactivating) return;
     try {
-      await deactivateEmployee(row.id);
+      await deactivateEmployee(deactivating.id);
+      setDeactivating(null);
       await load();
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "Deactivate nahi ho saka.");
+      setDeactivating(null);
     }
   };
 
@@ -581,6 +588,20 @@ export default function EmployeesPage() {
               <button type="button" onClick={() => setSalaryEmp(null)} className={secondaryButtonClass}>{t("close")}</button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {deactivating && (
+        <Modal title="Deactivate Employee" onClose={() => setDeactivating(null)}>
+          <p className="text-sm text-ink/70">
+            <strong>{deactivating.full_name}</strong> ({deactivating.employee_code}) ko deactivate karna hai? Unka login bhi band ho jayega.
+          </p>
+          <div className="mt-4 flex gap-2">
+            <button type="button" onClick={() => void confirmDeactivate()} className="inline-flex min-h-10 items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">
+              Deactivate
+            </button>
+            <button type="button" onClick={() => setDeactivating(null)} className={secondaryButtonClass}>Cancel</button>
+          </div>
         </Modal>
       )}
     </div>

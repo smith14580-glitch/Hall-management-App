@@ -98,6 +98,70 @@ export interface Payment {
   created_at?: string;
 }
 
+export interface Refund {
+  id: string;
+  booking_id: string;
+  credit_note_no: string;
+  amount: number;
+  refund_date: string;
+  method: string;
+  reference?: string | null;
+  reason: string;
+  created_at?: string | null;
+}
+
+export interface Expense {
+  id: string;
+  category: string;
+  vendor?: string | null;
+  description: string;
+  amount: number;
+  expense_date: string;
+  reference?: string | null;
+  notes?: string | null;
+  created_at?: string | null;
+}
+
+export interface ProfitLoss {
+  gross_received: number;
+  refunded: number;
+  net_revenue: number;
+  expenses: number;
+  profit: number;
+  by_category: Record<string, number>;
+  by_method: Record<string, number>;
+  payments_count: number;
+  refunds_count: number;
+  expenses_count: number;
+}
+
+export interface CashClosing {
+  date: string;
+  received_by_method: Record<string, number>;
+  refunded_by_method: Record<string, number>;
+  net_by_method: Record<string, number>;
+  total_received: number;
+  total_refunded: number;
+  net_total: number;
+  transactions: Array<{
+    type: "payment" | "refund";
+    method: string;
+    amount: number;
+    reference?: string | null;
+    receipt_number?: string | null;
+    booking_id?: string | null;
+  }>;
+}
+
+export interface Occupancy {
+  month: string;
+  total_slots: number;
+  booked_slots: number;
+  free_slots: number;
+  occupancy_percent: number;
+  by_slot: { day: number; night: number };
+}
+
 export interface HallTable {
   id: string;
   hall_id: string;

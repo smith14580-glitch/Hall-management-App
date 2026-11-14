@@ -12,16 +12,21 @@ import type {
   AttendanceRow,
   AvailabilityDay,
   Booking,
+  CashClosing,
   Customer,
   CustomerSummary,
   DashboardSummary,
   Employee,
+  Expense,
   Hall,
   HallTable,
+  Occupancy,
   Payment,
   Pricing,
+  ProfitLoss,
   Quotation,
   QuotationTemplate,
+  Refund,
   RevenuePoint,
   SalaryRecord,
   SettingItem,
@@ -534,6 +539,138 @@ export async function fetchAllPayments(): Promise<Payment[]> {
     bookings.slice(0, 15).map((b) => fetchBookingPayments(b.id).catch(() => [] as Payment[])),
   );
   return lists.flat().sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
+}
+
+// ---------- Refunds & expenses ----------
+export interface ExpenseFilters {
+  month?: string;
+  category?: string;
+  date_from?: string;
+  date_to?: string;
+}
+
+export async function fetchExpenses(
+  filters: ExpenseFilters = {},
+): Promise<{ items: Expense[]; total: number; by_category: Record<string, number>; count: number }> {
+  if (demoActive()) return sample({ items: [], total: 0, by_category: {}, count: 0 });
+  const q = new URLSearchParams();
+  Object.entries(filters).forEach(([k, v]) => {
+    if (v) q.set(k, v);
+  });
+  return apiFetch<{ items: Expense[]; total: number; by_category: Record<string, number>; count: number }>(
+    `/expenses${q.toString() ? `?${q.toString()}` : ""}`,
+  );
+}
+
+export async function createExpense(body: Record<string, unknown>): Promise<Expense> {
+  requireLogin();
+  if (demoActive()) {
+    return sample({
+      id: `exp-${Date.now()}`,
+      category: String(body.category || "other"),
+      vendor: (body.vendor as string) || null,
+      description: String(body.description || ""),
+      amount: Number(body.amount || 0),
+      expense_date: String(body.expense_date || ""),
+      reference: (body.reference as string) || null,
+      notes: (body.notes as string) || null,
+    });
+  }
+  return apiFetch<Expense>("/expenses", { method: "POST", body });
+}
+
+export async function updateExpense(id: string, body: Record<string, unknown>): Promise<Expense> {
+  requireLogin();
+  if (demoActive()) {
+    return sample({
+      id,
+      category: String(body.category || "other"),
+      vendor: (body.vendor as string) || null,
+      description: String(body.description || ""),
+      amount: Number(body.amount || 0),
+      expense_date: String(body.expense_date || ""),
+      reference: (body.reference as string) || null,
+      notes: (body.notes as string) || null,
+    });
+  }
+  return apiFetch<Expense>(`/expenses/${id}`, { method: "PATCH", body });
+}
+
+export async function deleteExpense(id: string): Promise<void> {
+  requireLogin();
+  if (demoActive()) return sample(undefined);
+  await apiFetch(`/expenses/${id}`, { method: "DELETE" });
+}
+
+export async function fetchBookingRefunds(bookingId: string): Promise<Refund[]> {
+  if (demoActive()) return sample([]);
+  return asArray<Refund>(await apiFetch<unknown>(`/bookings/${bookingId}/refunds`));
+}
+
+export async function recordRefund(bookingId: string, body: Record<string, unknown>): Promise<Refund> {
+  requireLogin();
+  if (demoActive()) {
+    return sample({
+      id: `ref-${Date.now()}`,
+      booking_id: bookingId,
+      credit_note_no: "CN-2026-0001",
+      amount: Number(body.amount || 0),
+      refund_date: String(body.refund_date || ""),
+      method: String(body.method || "cash"),
+      reference: (body.reference as string) || null,
+      reason: String(body.reason || ""),
+    });
+  }
+  return apiFetch<Refund>(`/bookings/${bookingId}/refunds`, { method: "POST", body });
+}
+
+export async function fetchProfitLoss(params: Record<string, string> = {}): Promise<ProfitLoss> {
+  if (demoActive()) {
+    return sample({
+      gross_received: 0,
+      refunded: 0,
+      net_revenue: 0,
+      expenses: 0,
+      profit: 0,
+      by_category: {},
+      by_method: {},
+      payments_count: 0,
+      refunds_count: 0,
+      expenses_count: 0,
+    });
+  }
+  const q = new URLSearchParams(params).toString();
+  return apiFetch<ProfitLoss>(`/reports/profit-loss${q ? `?${q}` : ""}`);
+}
+
+export async function fetchCashClosing(date: string): Promise<CashClosing> {
+  if (demoActive()) {
+    return sample({
+      date,
+      received_by_method: {},
+      refunded_by_method: {},
+      net_by_method: {},
+      total_received: 0,
+      total_refunded: 0,
+      net_total: 0,
+      transactions: [],
+    });
+  }
+  return apiFetch<CashClosing>(`/reports/cash-closing?closing_date=${encodeURIComponent(date)}`);
+}
+
+export async function fetchOccupancy(month: string): Promise<Occupancy> {
+  if (demoActive()) {
+    return sample({
+      month,
+      total_slots: 0,
+      booked_slots: 0,
+      free_slots: 0,
+      occupancy_percent: 0,
+      by_slot: { day: 0, night: 0 },
+    });
+  }
+  return apiFetch<Occupancy>(`/reports/occupancy?month=${encodeURIComponent(month)}`);
 }
 
 // ---------- Tables (§4.8) ----------

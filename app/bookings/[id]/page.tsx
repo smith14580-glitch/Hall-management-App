@@ -6,23 +6,25 @@ import { useParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, MessageSquare, Printer, Receipt, Trash2 } from "lucide-react";
+import { ArrowLeft, MessageSquare, Printer, Receipt, RotateCcw, Trash2 } from "lucide-react";
 import {
   ApiError,
   allocateTables,
   bookingAction,
   fetchBooking,
   fetchBookingPayments,
+  fetchBookingRefunds,
   fetchBookingTables,
   fetchTables,
   normalizePhone,
   recordPayment,
+  recordRefund,
   voidPayment,
 } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 import { useToast } from "@/components/toast";
 import { formatDate, formatDateTime, formatPKR, todayISO } from "@/lib/format";
-import { PAYMENT_METHODS, type Booking, type HallTable, type Payment, type TableAllocation } from "@/lib/types";
+import { PAYMENT_METHODS, type Booking, type HallTable, type Payment, type Refund, type TableAllocation } from "@/lib/types";
 import {
   Badge,
   bookingStatusTone,
@@ -41,6 +43,7 @@ import {
 } from "@/components/ui";
 import { ReceiptModal } from "@/components/receipt";
 import { BookingDocument } from "@/components/booking-document";
+import { CreditNoteModal } from "@/components/credit-note";
 
 const paymentSchema = z.object({
   amount: z.coerce.number().positive("Amount 0 se zyada hona chahiye."),
@@ -60,6 +63,7 @@ export default function BookingDetailPage() {
   const toast = useToast();
   const [booking, setBooking] = useState<Booking | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [refunds, setRefunds] = useState<Refund[]>([]);
   const [tables, setTables] = useState<HallTable[]>([]);
   const [allocated, setAllocated] = useState<TableAllocation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,6 +74,20 @@ export default function BookingDetailPage() {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
   const [showDocument, setShowDocument] = useState(false);
+  const [showRefundForm, setShowRefundForm] = useState(false);
+  const [creditNote, setCreditNote] = useState<Refund | null>(null);
+  const [voiding, setVoiding] = useState<Payment | null>(null);
+  const [voidReason, setVoidReason] = useState("");
+  const [voidError, setVoidError] = useState("");
+  const [refundForm, setRefundForm] = useState({
+    amount: "",
+    refund_date: todayISO(),
+    method: "cash",
+    reason: "",
+    reference: "",
+  });
+  const [refundError, setRefundError] = useState("");
+  const [refundBusy, setRefundBusy] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [selectedTables, setSelectedTables] = useState<string[]>([]);
   const [tableBusy, setTableBusy] = useState(false);
@@ -90,14 +108,16 @@ export default function BookingDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      const [b, pays, tbls, alloc] = await Promise.all([
+      const [b, pays, refs, tbls, alloc] = await Promise.all([
         fetchBooking(id),
         fetchBookingPayments(id).catch(() => [] as Payment[]),
+        fetchBookingRefunds(id).catch(() => [] as Refund[]),
         fetchTables().catch(() => [] as HallTable[]),
         fetchBookingTables(id).catch(() => [] as TableAllocation[]),
       ]);
       setBooking(b);
       setPayments(pays);
+      setRefunds(refs);
       setTables(tbls);
       setAllocated(alloc);
       setSelectedTables(alloc.map((a) => a.table_id));
@@ -151,15 +171,52 @@ export default function BookingDetailPage() {
     }
   };
 
-  const onVoidPayment = async (paymentId: string) => {
-    const reason = window.prompt("Void karne ki wajah likho (zaroori hai):");
-    if (!reason) return;
+  const onVoidPayment = async () => {
+    if (!voiding) return;
+    if (!voidReason.trim()) {
+      setVoidError("Void karne ki wajah likhna zaroori hai.");
+      return;
+    }
     try {
-      await voidPayment(paymentId, reason);
+      await voidPayment(voiding.id, voidReason.trim());
       toast.success("Payment void ho gayi.");
+      setVoiding(null);
+      setVoidReason("");
+      setVoidError("");
       await load();
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : "Void nahi ho saka.");
+      setVoidError(err instanceof ApiError ? err.message : "Void nahi ho saka.");
+    }
+  };
+
+  const onRecordRefund = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setRefundError("");
+    if (!refundForm.amount || Number(refundForm.amount) <= 0) {
+      setRefundError("Amount 0 se zyada hona chahiye.");
+      return;
+    }
+    if (!refundForm.reason.trim()) {
+      setRefundError("Refund ki wajah likhna zaroori hai.");
+      return;
+    }
+    setRefundBusy(true);
+    try {
+      const created = await recordRefund(id, {
+        amount: Number(refundForm.amount),
+        refund_date: refundForm.refund_date,
+        method: refundForm.method,
+        reason: refundForm.reason.trim(),
+        reference: refundForm.reference || undefined,
+      });
+      toast.success(`Refund recorded — ${formatPKR(created.amount)} (${created.credit_note_no})`);
+      setShowRefundForm(false);
+      setRefundForm({ amount: "", refund_date: todayISO(), method: "cash", reason: "", reference: "" });
+      await load();
+    } catch (err) {
+      setRefundError(err instanceof ApiError ? err.message : "Refund save nahi hua.");
+    } finally {
+      setRefundBusy(false);
     }
   };
 
@@ -204,6 +261,11 @@ export default function BookingDetailPage() {
         label: `Payment received — ${formatPKR(p.amount)}`,
         detail: p.method.replace("_", " "),
       })),
+    ...refunds.map((r) => ({
+      at: r.created_at || `${r.refund_date}T00:00:00`,
+      label: `Refund issued — ${formatPKR(r.amount)}`,
+      detail: `${r.credit_note_no} · ${r.method.replace("_", " ")}`,
+    })),
     ...(booking.completed_at ? [{ at: booking.completed_at, label: "Event completed", detail: null }] : []),
     ...(booking.status === "cancelled"
       ? [{ at: booking.updated_at || "", label: "Booking cancelled", detail: booking.cancelled_reason || null }]
@@ -372,7 +434,7 @@ export default function BookingDetailPage() {
                               <Receipt className="h-3.5 w-3.5" /> Receipt
                             </button>
                             {!p.is_voided && (
-                <button type="button" data-requires-auth onClick={() => onVoidPayment(p.id)} className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50" aria-label={`Void ${p.receipt_number}`}>
+                <button type="button" data-requires-auth onClick={() => { setVoiding(p); setVoidReason(""); setVoidError(""); }} className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50" aria-label={`Void ${p.receipt_number}`}>
                   <Trash2 className="h-3.5 w-3.5" /> Void
                 </button>
                             )}
@@ -384,6 +446,132 @@ export default function BookingDetailPage() {
                 </table>
               )}
             </div>
+          </div>
+
+          {/* Refunds */}
+          <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="font-display text-lg font-bold text-charcoal">Refunds / Credit Notes</h2>
+                <p className="mt-1 text-sm text-ink/60">Refund hone par received amount khud kam ho jata hai.</p>
+              </div>
+              {booking.amount_paid > 0 && (
+                <button type="button" data-requires-auth onClick={() => setShowRefundForm((v) => !v)} className={secondaryButtonClass}>
+                  <RotateCcw className="h-4 w-4" /> Record Refund
+                </button>
+              )}
+            </div>
+
+            {showRefundForm && (
+              <form onSubmit={onRecordRefund} className="mt-5 grid gap-4 rounded-xl bg-offwhite p-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="refund_amount" className={labelClass}>Amount (PKR) *</label>
+                  <input
+                    id="refund_amount"
+                    type="number"
+                    min={1}
+                    max={booking.amount_paid}
+                    step="0.01"
+                    required
+                    value={refundForm.amount}
+                    onChange={(e) => setRefundForm({ ...refundForm, amount: e.target.value })}
+                    className={inputClass}
+                  />
+                  <p className="mt-1 text-xs text-ink/50">Max refund: {formatPKR(booking.amount_paid)}</p>
+                </div>
+                <div>
+                  <label htmlFor="refund_date" className={labelClass}>Refund Date *</label>
+                  <input
+                    id="refund_date"
+                    type="date"
+                    required
+                    value={refundForm.refund_date}
+                    onChange={(e) => setRefundForm({ ...refundForm, refund_date: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="refund_method" className={labelClass}>Method *</label>
+                  <select
+                    id="refund_method"
+                    value={refundForm.method}
+                    onChange={(e) => setRefundForm({ ...refundForm, method: e.target.value })}
+                    className={inputClass}
+                  >
+                    {PAYMENT_METHODS.filter((m) => m.value !== "advance").map((m) => (
+                      <option key={m.value} value={m.value}>{m.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="refund_ref" className={labelClass}>Reference</label>
+                  <input
+                    id="refund_ref"
+                    value={refundForm.reference}
+                    onChange={(e) => setRefundForm({ ...refundForm, reference: e.target.value })}
+                    className={inputClass}
+                    placeholder="Cheque / transaction no."
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label htmlFor="refund_reason" className={labelClass}>Reason *</label>
+                  <input
+                    id="refund_reason"
+                    required
+                    value={refundForm.reason}
+                    onChange={(e) => setRefundForm({ ...refundForm, reason: e.target.value })}
+                    className={inputClass}
+                    placeholder="e.g. Booking cancelled — advance refunded"
+                  />
+                </div>
+                {refundError && <p className="text-sm text-red-600 sm:col-span-2">{refundError}</p>}
+                <div className="flex gap-2 sm:col-span-2">
+                  <button type="submit" disabled={refundBusy} className={goldButtonClass}>
+                    {refundBusy ? "Saving…" : "Record Refund"}
+                  </button>
+                  <button type="button" onClick={() => setShowRefundForm(false)} className={secondaryButtonClass}>Cancel</button>
+                </div>
+              </form>
+            )}
+
+            {refunds.length === 0 ? (
+              <p className="mt-4 text-sm text-ink/60">Koi refund record nahi.</p>
+            ) : (
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-stone-line text-xs uppercase tracking-wide text-ink/50">
+                      <th className="py-2 pe-3">Credit Note</th>
+                      <th className="py-2 pe-3">Date</th>
+                      <th className="py-2 pe-3">Method</th>
+                      <th className="py-2 pe-3">Reason</th>
+                      <th className="py-2 pe-3">Amount</th>
+                      <th className="py-2"> </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {refunds.map((r) => (
+                      <tr key={r.id}>
+                        <td className="py-2 pe-3 font-semibold">{r.credit_note_no}</td>
+                        <td className="py-2 pe-3">{formatDate(r.refund_date)}</td>
+                        <td className="py-2 pe-3 capitalize">{r.method.replace("_", " ")}</td>
+                        <td className="max-w-48 truncate py-2 pe-3">{r.reason}</td>
+                        <td className="py-2 pe-3 font-semibold text-red-700">−{formatPKR(r.amount)}</td>
+                        <td className="py-2">
+                          <button
+                            type="button"
+                            onClick={() => setCreditNote(r)}
+                            className="inline-flex items-center gap-1 rounded-lg border border-stone-line px-2.5 py-1.5 text-xs font-semibold hover:bg-offwhite"
+                          >
+                            <Receipt className="h-3.5 w-3.5" /> Credit Note
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* Tables */}
@@ -459,6 +647,32 @@ export default function BookingDetailPage() {
       </div>
 
       {receipt && <ReceiptModal payment={receipt} booking={booking} onClose={() => setReceipt(null)} />}
+
+      {creditNote && <CreditNoteModal refund={creditNote} booking={booking} onClose={() => setCreditNote(null)} />}
+
+      {voiding && (
+        <Modal title={`Void Payment ${voiding.receipt_number}`} onClose={() => setVoiding(null)}>
+          <p className="text-sm text-ink/70">
+            {formatPKR(voiding.amount)} ki payment void ho jayegi aur booking ka balance dobara update hoga.
+          </p>
+          <label htmlFor="void_reason" className={`${labelClass} mt-4`}>Reason *</label>
+          <textarea
+            id="void_reason"
+            rows={3}
+            value={voidReason}
+            onChange={(e) => setVoidReason(e.target.value)}
+            className={inputClass}
+            placeholder="e.g. Wrong entry, duplicate payment"
+          />
+          {voidError && <p className="mt-2 text-sm text-red-600">{voidError}</p>}
+          <div className="mt-4 flex gap-2">
+            <button type="button" onClick={() => void onVoidPayment()} className="inline-flex min-h-10 items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">
+              Void Payment
+            </button>
+            <button type="button" onClick={() => setVoiding(null)} className={secondaryButtonClass}>Cancel</button>
+          </div>
+        </Modal>
+      )}
 
       {showDocument && (
         <Modal title="Booking Confirmation" onClose={() => setShowDocument(false)}>
