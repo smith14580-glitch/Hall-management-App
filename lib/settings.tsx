@@ -22,6 +22,9 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   addon_non_ac_price: "0",
   guest_price_per_guest: "0",
   app_name: "MARQUE ONE",
+  business_address: "",
+  business_phone: "",
+  business_phone_2: "",
 };
 
 function readLocal(): Record<string, string> {

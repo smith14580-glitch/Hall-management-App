@@ -44,6 +44,7 @@ import {
 import { ReceiptModal } from "@/components/receipt";
 import { BookingDocument } from "@/components/booking-document";
 import { CreditNoteModal } from "@/components/credit-note";
+import { Invoice } from "@/components/invoice";
 
 const paymentSchema = z.object({
   amount: z.coerce.number().positive("Amount 0 se zyada hona chahiye."),
@@ -74,6 +75,7 @@ export default function BookingDetailPage() {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
   const [showDocument, setShowDocument] = useState(false);
+  const [showInvoice, setShowInvoice] = useState(false);
   const [showRefundForm, setShowRefundForm] = useState(false);
   const [creditNote, setCreditNote] = useState<Refund | null>(null);
   const [voiding, setVoiding] = useState<Payment | null>(null);
@@ -686,6 +688,13 @@ export default function BookingDetailPage() {
               <dd className="font-display text-lg font-bold text-gold">{formatPKR(booking.balance_amount)}</dd>
             </div>
           </dl>
+          <button
+            type="button"
+            onClick={() => setShowInvoice(true)}
+            className={`${secondaryButtonClass} mt-5 w-full`}
+          >
+            <Printer className="h-4 w-4" /> {t("printInvoice")}
+          </button>
           {booking.balance_amount > 0 && reminderUrl && (
             <a
               href={reminderUrl}
@@ -702,6 +711,20 @@ export default function BookingDetailPage() {
           </p>
         </aside>
       </div>
+
+      {showInvoice && (
+        <Modal title={t("invoice")} onClose={() => setShowInvoice(false)}>
+          <Invoice booking={booking} />
+          <div className="mt-4 flex gap-2">
+            <button type="button" onClick={() => window.print()} className={goldButtonClass}>
+              <Printer className="h-4 w-4" /> {t("printSavePdf")}
+            </button>
+            <button type="button" onClick={() => setShowInvoice(false)} className={secondaryButtonClass}>
+              {t("close")}
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {receipt && <ReceiptModal payment={receipt} booking={booking} onClose={() => setReceipt(null)} />}
 

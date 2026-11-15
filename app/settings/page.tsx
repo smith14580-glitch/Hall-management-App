@@ -37,7 +37,13 @@ const ADDON_EDITABLE: Array<{ key: string; labelKey: string; hint: string }> = [
   { key: "guest_price_per_guest", labelKey: "guestPricePerGuest", hint: "Per-guest charge added to every booking. 0 disables it." },
 ];
 
-const ALL_EDITABLE = [...EDITABLE, ...ADDON_EDITABLE];
+const BUSINESS_EDITABLE: Array<{ key: string; labelKey: string; hint: string; placeholder: string }> = [
+  { key: "business_address", labelKey: "businessAddress", hint: "Invoice header par dikhega.", placeholder: "e.g. Main Boulevard, Lahore" },
+  { key: "business_phone", labelKey: "businessPhone", hint: "Invoice header par dikhega.", placeholder: "e.g. 042-1234567" },
+  { key: "business_phone_2", labelKey: "businessPhone2", hint: "Doosra number (optional).", placeholder: "e.g. 0300-1234567" },
+];
+
+const ALL_EDITABLE = [...EDITABLE, ...ADDON_EDITABLE, ...BUSINESS_EDITABLE];
 
 const LABELS: Record<string, string> = {
   hall_day_price: "Day price",
@@ -55,6 +61,9 @@ const LABELS: Record<string, string> = {
   addon_ac_price: "AC price",
   addon_non_ac_price: "Non-AC price",
   guest_price_per_guest: "Guest price / guest",
+  business_address: "Business address",
+  business_phone: "Business phone",
+  business_phone_2: "Business phone 2",
 };
 
 function toMinutes(t: string): number {
@@ -335,6 +344,27 @@ export default function SettingsPage() {
                   }}
                 />
                 {fieldErrors[item.key] && <p className="mt-1 text-xs font-semibold text-red-600">{fieldErrors[item.key]}</p>}
+                <p className="mt-1 text-xs text-ink/50">{item.hint}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
+          <h2 className="font-display text-lg font-bold text-charcoal">{t("businessDetails")}</h2>
+          <p className="mt-1 text-sm text-ink/60">Ye details invoice header par dikhti hain.</p>
+          <div className="mt-4 space-y-4">
+            {BUSINESS_EDITABLE.map((item) => (
+              <div key={item.key}>
+                <label htmlFor={item.key} className={labelClass}>{t(item.labelKey)}</label>
+                <input
+                  id={item.key}
+                  type="text"
+                  className={inputClass}
+                  placeholder={item.placeholder}
+                  value={values[item.key] || ""}
+                  onChange={(e) => setValues((v) => ({ ...v, [item.key]: e.target.value }))}
+                />
                 <p className="mt-1 text-xs text-ink/50">{item.hint}</p>
               </div>
             ))}
