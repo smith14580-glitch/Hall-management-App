@@ -48,6 +48,9 @@ export default function NewBookingPage() {
   const [submitError, setSubmitError] = useState("");
   const [conflict, setConflict] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
+  const [refreshmentSelected, setRefreshmentSelected] = useState(false);
+  const [refreshmentGuests, setRefreshmentGuests] = useState(300);
+  const [hallType, setHallType] = useState<"ac" | "non_ac">("ac");
 
   const {
     register,
@@ -68,6 +71,7 @@ export default function NewBookingPage() {
 
   const slot = useWatch({ control, name: "slot" });
   const eventDate = useWatch({ control, name: "event_date" });
+  const guestCount = useWatch({ control, name: "guest_count" });
   const advance = useWatch({ control, name: "advance_amount" });
 
   useEffect(() => {
@@ -78,9 +82,6 @@ export default function NewBookingPage() {
         if (cancelled) return;
         setPricing(p);
         if (halls.length > 0) setHallId(halls[0].id);
-        const advancePercent = getNumber("default_advance_percent", 50);
-        const nightPrice = getNumber("hall_night_price", p.night_price);
-        setValue("advance_amount", Math.round((nightPrice * advancePercent) / 100));
       } catch (err) {
         if (!cancelled) setLoadError(err);
       } finally {
@@ -98,7 +99,7 @@ export default function NewBookingPage() {
     return () => {
       cancelled = true;
     };
-  }, [setValue, getNumber]);
+  }, [setValue]);
 
   // Live availability check when date/slot change. All state updates
   // happen inside the async callback, never synchronously in the effect.
@@ -129,11 +130,24 @@ export default function NewBookingPage() {
     };
   }, [hallId, eventDate, slot]);
 
-  const total =
+  const hallPrice =
     slot === "day"
       ? getNumber("hall_day_price", pricing?.day_price ?? 0)
       : getNumber("hall_night_price", pricing?.night_price ?? 0);
+  const refreshmentRate = getNumber("addon_refreshment_per_guest");
+  const acRate = getNumber("addon_ac_price");
+  const nonAcRate = getNumber("addon_non_ac_price");
+  const hallTypeRate = hallType === "ac" ? acRate : nonAcRate;
+  const refreshmentAmount = refreshmentSelected
+    ? Math.max(0, Number(refreshmentGuests) || 0) * refreshmentRate
+    : 0;
+  const total = hallPrice + refreshmentAmount + hallTypeRate;
   const remaining = Math.max(0, total - (advance || 0));
+
+  useEffect(() => {
+    const pct = getNumber("default_advance_percent", 50);
+    setValue("advance_amount", Math.round((total * pct) / 100));
+  }, [total, getNumber, setValue]);
 
   const onSubmit = async (values: FormValues) => {
     setSubmitError("");
@@ -160,6 +174,13 @@ export default function NewBookingPage() {
         special_instructions: values.special_instructions || undefined,
         total_price: total,
         advance_amount: values.advance_amount,
+        refreshment_selected: refreshmentSelected,
+        refreshment_guests: refreshmentSelected ? Number(refreshmentGuests) || 0 : 0,
+        refreshment_rate: refreshmentRate,
+        refreshment_amount: refreshmentAmount,
+        hall_type: hallType,
+        hall_type_rate: hallTypeRate,
+        hall_type_amount: hallTypeRate,
       });
       router.push(`/bookings/${created.id}`);
     } catch (err) {
@@ -256,6 +277,64 @@ export default function NewBookingPage() {
             </div>
           </div>
 
+          <div className="border-t border-stone-line pt-5">
+            <h2 className="font-display text-lg font-bold text-charcoal">{t("addOns")}</h2>
+            <div className="mt-4 space-y-4">
+              <label className="flex items-start gap-3 rounded-lg border border-stone-line p-3">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4"
+                  checked={refreshmentSelected}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setRefreshmentSelected(checked);
+                    if (checked) setRefreshmentGuests(Number(guestCount) || 0);
+                  }}
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-charcoal">{t("refreshment")}</span>
+                  <span className="block text-xs text-ink/60">
+                    {t("refreshmentHint")} — {formatPKR(getNumber("addon_refreshment_per_guest"))} / guest
+                  </span>
+                </span>
+              </label>
+              {refreshmentSelected && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="refreshment_guests" className={labelClass}>{t("refreshmentGuests")}</label>
+                    <input
+                      id="refreshment_guests"
+                      type="number"
+                      min={0}
+                      className={inputClass}
+                      value={refreshmentGuests}
+                      onChange={(e) => setRefreshmentGuests(Math.max(0, Number(e.target.value) || 0))}
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <p className="w-full rounded-lg bg-offwhite px-3 py-2 text-sm text-ink/70">
+                      {t("amount")}: <strong className="text-charcoal">{formatPKR(refreshmentAmount)}</strong>
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div>
+                <span className={labelClass}>{t("hallType")}</span>
+                <div className="flex gap-2">
+                  {(["ac", "non_ac"] as const).map((ht) => (
+                    <label
+                      key={ht}
+                      className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-semibold ${hallType === ht ? "border-gold bg-gold-light text-gold-dark" : "border-stone-line bg-white text-charcoal"}`}
+                    >
+                      <input type="radio" name="hall_type" className="sr-only" checked={hallType === ht} onChange={() => setHallType(ht)} />
+                      {ht === "ac" ? `${t("ac")} (${formatPKR(acRate)})` : `${t("nonAc")} (${formatPKR(nonAcRate)})`}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div>
             <label htmlFor="special_instructions" className={labelClass}>Special Instructions</label>
             <textarea id="special_instructions" rows={3} className={inputClass} placeholder="Stage, food, decoration…" {...register("special_instructions")} />
@@ -287,12 +366,27 @@ export default function NewBookingPage() {
             Hall: {pricing.hall_name || "MARQUE ONE"} · Slot: {slot === "day" ? "Day" : "Night"}
           </p>
           <dl className="mt-5 space-y-3 text-sm">
-            <div className="flex justify-between border-b border-white/10 pb-3">
+            <div className="flex justify-between gap-2 border-b border-white/10 pb-3">
+              <dt className="text-white/70">{t("hallPrice")} ({slot === "day" ? t("day") : t("night")})</dt>
+              <dd className="font-semibold">{formatPKR(hallPrice)}</dd>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-white/10 pb-3">
+              <dt className="text-white/70">
+                {t("refreshment")}
+                {refreshmentSelected ? ` (${refreshmentGuests} × ${formatPKR(refreshmentRate)})` : ""}
+              </dt>
+              <dd className="font-semibold">{formatPKR(refreshmentAmount)}</dd>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-white/10 pb-3">
+              <dt className="text-white/70">{hallType === "ac" ? t("acCharges") : t("nonAcCharges")}</dt>
+              <dd className="font-semibold">{formatPKR(hallTypeRate)}</dd>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-white/10 pb-3 pt-1">
               <dt className="text-white/70">Total Price</dt>
               <dd className="font-display text-lg font-bold">{formatPKR(total)}</dd>
             </div>
-            <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
-              <label htmlFor="advance_amount" className="text-white/70">Advance ({getNumber("default_advance_percent")}% default)</label>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+              <label htmlFor="advance_amount" className="text-white/70">{t("advance")} ({getNumber("default_advance_percent")}%)</label>
               <input
                 id="advance_amount"
                 type="number"
@@ -303,7 +397,7 @@ export default function NewBookingPage() {
               />
             </div>
             {errors.advance_amount && <p className="text-xs text-red-300">{errors.advance_amount.message}</p>}
-            <div className="flex justify-between">
+            <div className="flex justify-between gap-2">
               <dt className="text-white/70">Remaining after advance</dt>
               <dd className="font-semibold text-gold">{formatPKR(remaining)}</dd>
             </div>

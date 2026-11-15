@@ -28,6 +28,14 @@ const EDITABLE: Array<{ key: string; label: string; hint: string; type?: string 
   { key: "slot_night_end", label: "Night Slot End", hint: "Night slot ka end time.", type: "time" },
 ];
 
+const ADDON_EDITABLE: Array<{ key: string; labelKey: string; hint: string }> = [
+  { key: "addon_refreshment_per_guest", labelKey: "refreshmentPerGuest", hint: "Juice + water bottle — per guest charge." },
+  { key: "addon_ac_price", labelKey: "acPrice", hint: "Flat AC charges per event." },
+  { key: "addon_non_ac_price", labelKey: "nonAcPrice", hint: "Flat Non-AC charges per event." },
+];
+
+const ALL_EDITABLE = [...EDITABLE, ...ADDON_EDITABLE];
+
 const LABELS: Record<string, string> = {
   hall_day_price: "Day price",
   hall_night_price: "Night price",
@@ -38,6 +46,9 @@ const LABELS: Record<string, string> = {
   slot_day_end: "Day slot end",
   slot_night_start: "Night slot start",
   slot_night_end: "Night slot end",
+  addon_refreshment_per_guest: "Refreshment / guest",
+  addon_ac_price: "AC price",
+  addon_non_ac_price: "Non-AC price",
 };
 
 function toMinutes(t: string): number {
@@ -95,7 +106,7 @@ export default function SettingsPage() {
         const s = await refresh();
         if (!active) return;
         const map: Record<string, string> = {};
-        EDITABLE.forEach((item) => {
+        ALL_EDITABLE.forEach((item) => {
           map[item.key] = String(s[item.key] ?? "");
         });
         setValues(map);
@@ -142,6 +153,14 @@ export default function SettingsPage() {
     if (ns && ne && toMinutes(ne) <= toMinutes(ns)) errs.slot_night_end = "Night slot end, start se baad hona chahiye.";
     if (!Number.isFinite(grace) || grace < 0) errs.late_grace_minutes = "Late grace 0 ya zyada hona chahiye.";
 
+    (["addon_refreshment_per_guest", "addon_ac_price", "addon_non_ac_price"] as const).forEach((key) => {
+      const raw = String(values[key] ?? "");
+      const num = Number(raw);
+      if (raw === "" || !Number.isFinite(num) || num < 0) {
+        errs[key] = "0 ya zyada hona chahiye.";
+      }
+    });
+
     if (guestCap !== "") {
       const g = Number(guestCap);
       if (!Number.isFinite(g) || g <= 0) errs.capacity_guests = "Max guests 0 se zyada hona chahiye.";
@@ -166,7 +185,7 @@ export default function SettingsPage() {
     try {
       const updates: Record<string, string> = {};
       const changedLabels: string[] = [];
-      for (const item of EDITABLE) {
+      for (const item of ALL_EDITABLE) {
         const v = String(values[item.key] ?? "");
         const prev = String(initial[item.key] ?? "");
         if (v !== prev) {
@@ -288,6 +307,31 @@ export default function SettingsPage() {
             <p className="rounded-lg bg-offwhite px-3 py-2 text-xs text-ink/60">
               Current: Day {formatPKR(Number(values.hall_day_price || 0))} · Night {formatPKR(Number(values.hall_night_price || 0))}
             </p>
+          </div>
+        </div>
+
+        <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
+          <h2 className="font-display text-lg font-bold text-charcoal">{t("addonPrices")}</h2>
+          <p className="mt-1 text-sm text-ink/60">Refreshment aur hall type charges — nayi bookings par lagega.</p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            {ADDON_EDITABLE.map((item) => (
+              <div key={item.key}>
+                <label htmlFor={item.key} className={labelClass}>{t(item.labelKey)}</label>
+                <input
+                  id={item.key}
+                  type="number"
+                  min={0}
+                  className={inputClass}
+                  value={values[item.key] || ""}
+                  onChange={(e) => {
+                    setValues((v) => ({ ...v, [item.key]: e.target.value }));
+                    setFieldErrors((fe) => ({ ...fe, [item.key]: "" }));
+                  }}
+                />
+                {fieldErrors[item.key] && <p className="mt-1 text-xs font-semibold text-red-600">{fieldErrors[item.key]}</p>}
+                <p className="mt-1 text-xs text-ink/50">{item.hint}</p>
+              </div>
+            ))}
           </div>
         </div>
 

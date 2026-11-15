@@ -281,6 +281,15 @@ export default function BookingDetailPage() {
     return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
   })();
 
+  const refreshmentAmount = Number(booking.refreshment_amount || 0);
+  const hallTypeAmount = Number(booking.hall_type_amount || 0);
+  const hasAddOns =
+    Boolean(booking.refreshment_selected) || refreshmentAmount > 0 || hallTypeAmount > 0;
+  const hallPrice = Math.max(
+    0,
+    Number(booking.total_price || 0) - refreshmentAmount - hallTypeAmount,
+  );
+
   return (
     <div>
       <button type="button" onClick={() => router.push("/bookings")} className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-gold-dark hover:underline">
@@ -612,12 +621,38 @@ export default function BookingDetailPage() {
         <aside className="h-fit rounded-xl bg-charcoal p-6 text-white shadow-sm lg:sticky lg:top-24">
           <h2 className="font-display text-lg font-bold">Payment Summary</h2>
           <dl className="mt-5 space-y-3 text-sm">
-            <div className="flex justify-between border-b border-white/10 pb-3">
+            {hasAddOns ? (
+              <>
+                <div className="flex justify-between gap-2 border-b border-white/10 pb-3">
+                  <dt className="text-white/70">{t("hallPrice")}</dt>
+                  <dd className="font-semibold">{formatPKR(hallPrice)}</dd>
+                </div>
+                {booking.refreshment_selected && (
+                  <div className="flex justify-between gap-2 border-b border-white/10 pb-3">
+                    <dt className="text-white/70">
+                      {t("refreshment")} ({booking.refreshment_guests || 0} × {formatPKR(booking.refreshment_rate || 0)})
+                    </dt>
+                    <dd className="font-semibold">{formatPKR(refreshmentAmount)}</dd>
+                  </div>
+                )}
+                {booking.hall_type && (
+                  <div className="flex justify-between gap-2 border-b border-white/10 pb-3">
+                    <dt className="text-white/70">
+                      {booking.hall_type === "non_ac" ? t("nonAcCharges") : t("acCharges")}
+                    </dt>
+                    <dd className="font-semibold">{formatPKR(hallTypeAmount)}</dd>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="border-b border-white/10 pb-3 text-xs text-white/50">{t("noAddOns")}</p>
+            )}
+            <div className="flex justify-between gap-2 border-b border-white/10 pb-3">
               <dt className="text-white/70">Total Price</dt>
               <dd className="font-display text-lg font-bold">{formatPKR(booking.total_price)}</dd>
             </div>
-            <div className="flex justify-between border-b border-white/10 pb-3">
-              <dt className="text-white/70">Advance Agreed</dt>
+            <div className="flex justify-between gap-2 border-b border-white/10 pb-3">
+              <dt className="text-white/70">{t("advance")} Agreed</dt>
               <dd className="font-semibold">{formatPKR(booking.advance_amount)}</dd>
             </div>
             <div className="flex justify-between border-b border-white/10 pb-3">
