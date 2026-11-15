@@ -73,13 +73,16 @@ export interface Booking {
   amount_paid: number;
   balance_amount: number;
   payment_status: PaymentStatus;
-  refreshment_selected?: boolean | null;
+  refreshment_type?: "none" | "water" | "juice" | "both" | "custom" | null;
+  refreshment_custom_name?: string | null;
   refreshment_guests?: number | null;
   refreshment_rate?: number | null;
   refreshment_amount?: number | null;
   hall_type?: "ac" | "non_ac" | null;
   hall_type_rate?: number | null;
   hall_type_amount?: number | null;
+  guest_rate?: number | null;
+  guest_amount?: number | null;
   status: BookingStatus;
   created_by?: string;
   cancelled_reason?: string | null;

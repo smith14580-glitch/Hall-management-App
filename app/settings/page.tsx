@@ -29,9 +29,12 @@ const EDITABLE: Array<{ key: string; label: string; hint: string; type?: string 
 ];
 
 const ADDON_EDITABLE: Array<{ key: string; labelKey: string; hint: string }> = [
-  { key: "addon_refreshment_per_guest", labelKey: "refreshmentPerGuest", hint: "Juice + water bottle — per guest charge." },
+  { key: "addon_refreshment_water_per_guest", labelKey: "refreshmentWaterPerGuest", hint: "Water bottles — per guest charge." },
+  { key: "addon_refreshment_juice_per_guest", labelKey: "refreshmentJuicePerGuest", hint: "Juice — per guest charge." },
+  { key: "addon_refreshment_both_per_guest", labelKey: "refreshmentBothPerGuest", hint: "Water + juice — per guest charge." },
   { key: "addon_ac_price", labelKey: "acPrice", hint: "Flat AC charges per event." },
   { key: "addon_non_ac_price", labelKey: "nonAcPrice", hint: "Flat Non-AC charges per event." },
+  { key: "guest_price_per_guest", labelKey: "guestPricePerGuest", hint: "Per-guest charge added to every booking. 0 disables it." },
 ];
 
 const ALL_EDITABLE = [...EDITABLE, ...ADDON_EDITABLE];
@@ -46,9 +49,12 @@ const LABELS: Record<string, string> = {
   slot_day_end: "Day slot end",
   slot_night_start: "Night slot start",
   slot_night_end: "Night slot end",
-  addon_refreshment_per_guest: "Refreshment / guest",
+  addon_refreshment_water_per_guest: "Water / guest",
+  addon_refreshment_juice_per_guest: "Juice / guest",
+  addon_refreshment_both_per_guest: "Water + juice / guest",
   addon_ac_price: "AC price",
   addon_non_ac_price: "Non-AC price",
+  guest_price_per_guest: "Guest price / guest",
 };
 
 function toMinutes(t: string): number {
@@ -153,7 +159,7 @@ export default function SettingsPage() {
     if (ns && ne && toMinutes(ne) <= toMinutes(ns)) errs.slot_night_end = "Night slot end, start se baad hona chahiye.";
     if (!Number.isFinite(grace) || grace < 0) errs.late_grace_minutes = "Late grace 0 ya zyada hona chahiye.";
 
-    (["addon_refreshment_per_guest", "addon_ac_price", "addon_non_ac_price"] as const).forEach((key) => {
+    ADDON_EDITABLE.forEach(({ key }) => {
       const raw = String(values[key] ?? "");
       const num = Number(raw);
       if (raw === "" || !Number.isFinite(num) || num < 0) {
@@ -313,7 +319,7 @@ export default function SettingsPage() {
         <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
           <h2 className="font-display text-lg font-bold text-charcoal">{t("addonPrices")}</h2>
           <p className="mt-1 text-sm text-ink/60">Refreshment aur hall type charges — nayi bookings par lagega.</p>
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {ADDON_EDITABLE.map((item) => (
               <div key={item.key}>
                 <label htmlFor={item.key} className={labelClass}>{t(item.labelKey)}</label>

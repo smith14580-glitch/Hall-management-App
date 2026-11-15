@@ -15,9 +15,12 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   slot_day_end: "16:00",
   slot_night_start: "19:00",
   slot_night_end: "23:00",
-  addon_refreshment_per_guest: "500",
+  addon_refreshment_water_per_guest: "100",
+  addon_refreshment_juice_per_guest: "300",
+  addon_refreshment_both_per_guest: "350",
   addon_ac_price: "20000",
   addon_non_ac_price: "0",
+  guest_price_per_guest: "0",
   app_name: "MARQUE ONE",
 };
 

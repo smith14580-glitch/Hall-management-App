@@ -48,7 +48,9 @@ export default function NewBookingPage() {
   const [submitError, setSubmitError] = useState("");
   const [conflict, setConflict] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
-  const [refreshmentSelected, setRefreshmentSelected] = useState(false);
+  const [refreshmentType, setRefreshmentType] = useState<"none" | "water" | "juice" | "both" | "custom">("none");
+  const [refreshmentCustomName, setRefreshmentCustomName] = useState("");
+  const [refreshmentCustomRate, setRefreshmentCustomRate] = useState(0);
   const [refreshmentGuests, setRefreshmentGuests] = useState(300);
   const [hallType, setHallType] = useState<"ac" | "non_ac">("ac");
 
@@ -134,14 +136,27 @@ export default function NewBookingPage() {
     slot === "day"
       ? getNumber("hall_day_price", pricing?.day_price ?? 0)
       : getNumber("hall_night_price", pricing?.night_price ?? 0);
-  const refreshmentRate = getNumber("addon_refreshment_per_guest");
+  const guestRate = getNumber("guest_price_per_guest");
+  const guestAmount = Math.max(0, Number(guestCount) || 0) * guestRate;
+  const waterRate = getNumber("addon_refreshment_water_per_guest");
+  const juiceRate = getNumber("addon_refreshment_juice_per_guest");
+  const bothRate = getNumber("addon_refreshment_both_per_guest");
   const acRate = getNumber("addon_ac_price");
   const nonAcRate = getNumber("addon_non_ac_price");
   const hallTypeRate = hallType === "ac" ? acRate : nonAcRate;
-  const refreshmentAmount = refreshmentSelected
-    ? Math.max(0, Number(refreshmentGuests) || 0) * refreshmentRate
-    : 0;
-  const total = hallPrice + refreshmentAmount + hallTypeRate;
+  const refreshmentRate =
+    refreshmentType === "water"
+      ? waterRate
+      : refreshmentType === "juice"
+        ? juiceRate
+        : refreshmentType === "both"
+          ? bothRate
+          : refreshmentType === "custom"
+            ? Math.max(0, Number(refreshmentCustomRate) || 0)
+            : 0;
+  const refreshmentAmount =
+    refreshmentType === "none" ? 0 : Math.max(0, Number(refreshmentGuests) || 0) * refreshmentRate;
+  const total = hallPrice + guestAmount + refreshmentAmount + hallTypeRate;
   const remaining = Math.max(0, total - (advance || 0));
 
   useEffect(() => {
@@ -174,13 +189,16 @@ export default function NewBookingPage() {
         special_instructions: values.special_instructions || undefined,
         total_price: total,
         advance_amount: values.advance_amount,
-        refreshment_selected: refreshmentSelected,
-        refreshment_guests: refreshmentSelected ? Number(refreshmentGuests) || 0 : 0,
+        refreshment_type: refreshmentType,
+        refreshment_custom_name: refreshmentType === "custom" ? refreshmentCustomName.trim() || null : null,
+        refreshment_guests: refreshmentType === "none" ? 0 : Number(refreshmentGuests) || 0,
         refreshment_rate: refreshmentRate,
         refreshment_amount: refreshmentAmount,
         hall_type: hallType,
         hall_type_rate: hallTypeRate,
         hall_type_amount: hallTypeRate,
+        guest_rate: guestRate,
+        guest_amount: guestAmount,
       });
       router.push(`/bookings/${created.id}`);
     } catch (err) {
@@ -268,6 +286,10 @@ export default function NewBookingPage() {
                 <label htmlFor="guest_count" className={labelClass}>Guests *</label>
                 <input id="guest_count" type="number" min={1} className={inputClass} {...register("guest_count")} />
                 {errors.guest_count && <p className="mt-1 text-xs text-red-600">{errors.guest_count.message}</p>}
+                <p className="mt-1 text-xs text-ink/60">
+                  {t("guests")}: {Number(guestCount) || 0} × {formatPKR(guestRate)} ={" "}
+                  <strong className="text-charcoal">{formatPKR(guestAmount)}</strong>
+                </p>
               </div>
               <div>
                 <label htmlFor="tables_required" className={labelClass}>Tables *</label>
@@ -280,25 +302,27 @@ export default function NewBookingPage() {
           <div className="border-t border-stone-line pt-5">
             <h2 className="font-display text-lg font-bold text-charcoal">{t("addOns")}</h2>
             <div className="mt-4 space-y-4">
-              <label className="flex items-start gap-3 rounded-lg border border-stone-line p-3">
-                <input
-                  type="checkbox"
-                  className="mt-1 h-4 w-4"
-                  checked={refreshmentSelected}
+              <div>
+                <label htmlFor="refreshment_type" className={labelClass}>{t("refreshment")}</label>
+                <select
+                  id="refreshment_type"
+                  className={inputClass}
+                  value={refreshmentType}
                   onChange={(e) => {
-                    const checked = e.target.checked;
-                    setRefreshmentSelected(checked);
-                    if (checked) setRefreshmentGuests(Number(guestCount) || 0);
+                    const value = e.target.value as typeof refreshmentType;
+                    setRefreshmentType(value);
+                    if (value !== "none") setRefreshmentGuests(Number(guestCount) || 0);
                   }}
-                />
-                <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-charcoal">{t("refreshment")}</span>
-                  <span className="block text-xs text-ink/60">
-                    {t("refreshmentHint")} — {formatPKR(getNumber("addon_refreshment_per_guest"))} / guest
-                  </span>
-                </span>
-              </label>
-              {refreshmentSelected && (
+                >
+                  <option value="none">{t("noRefreshment")}</option>
+                  <option value="water">{t("waterBottles")} — {formatPKR(waterRate)} / guest</option>
+                  <option value="juice">{t("juice")} — {formatPKR(juiceRate)} / guest</option>
+                  <option value="both">{t("waterJuice")} — {formatPKR(bothRate)} / guest</option>
+                  <option value="custom">{t("custom")}</option>
+                </select>
+              </div>
+
+              {refreshmentType !== "none" && (
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <label htmlFor="refreshment_guests" className={labelClass}>{t("refreshmentGuests")}</label>
@@ -314,10 +338,38 @@ export default function NewBookingPage() {
                   <div className="flex items-end">
                     <p className="w-full rounded-lg bg-offwhite px-3 py-2 text-sm text-ink/70">
                       {t("amount")}: <strong className="text-charcoal">{formatPKR(refreshmentAmount)}</strong>
+                      <span className="text-xs text-ink/50"> ({refreshmentGuests} × {formatPKR(refreshmentRate)})</span>
                     </p>
                   </div>
                 </div>
               )}
+
+              {refreshmentType === "custom" && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="refreshment_custom_name" className={labelClass}>{t("custom")} {t("name")}</label>
+                    <input
+                      id="refreshment_custom_name"
+                      className={inputClass}
+                      value={refreshmentCustomName}
+                      onChange={(e) => setRefreshmentCustomName(e.target.value)}
+                      placeholder="e.g. Green Tea"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="refreshment_custom_rate" className={labelClass}>{t("refreshmentPerGuest")}</label>
+                    <input
+                      id="refreshment_custom_rate"
+                      type="number"
+                      min={0}
+                      className={inputClass}
+                      value={refreshmentCustomRate}
+                      onChange={(e) => setRefreshmentCustomRate(Math.max(0, Number(e.target.value) || 0))}
+                    />
+                  </div>
+                </div>
+              )}
+
               <div>
                 <span className={labelClass}>{t("hallType")}</span>
                 <div className="flex gap-2">
@@ -371,9 +423,21 @@ export default function NewBookingPage() {
               <dd className="font-semibold">{formatPKR(hallPrice)}</dd>
             </div>
             <div className="flex justify-between gap-2 border-b border-white/10 pb-3">
+              <dt className="text-white/70">{t("guests")} ({Number(guestCount) || 0} × {formatPKR(guestRate)})</dt>
+              <dd className="font-semibold">{formatPKR(guestAmount)}</dd>
+            </div>
+            <div className="flex justify-between gap-2 border-b border-white/10 pb-3">
               <dt className="text-white/70">
-                {t("refreshment")}
-                {refreshmentSelected ? ` (${refreshmentGuests} × ${formatPKR(refreshmentRate)})` : ""}
+                {refreshmentType === "water"
+                  ? t("waterBottles")
+                  : refreshmentType === "juice"
+                    ? t("juice")
+                    : refreshmentType === "both"
+                      ? t("waterJuice")
+                      : refreshmentType === "custom"
+                        ? refreshmentCustomName.trim() || t("custom")
+                        : t("noRefreshment")}
+                {refreshmentType !== "none" ? ` (${refreshmentGuests} × ${formatPKR(refreshmentRate)})` : ""}
               </dt>
               <dd className="font-semibold">{formatPKR(refreshmentAmount)}</dd>
             </div>

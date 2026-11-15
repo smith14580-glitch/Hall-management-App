@@ -281,14 +281,28 @@ export default function BookingDetailPage() {
     return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
   })();
 
+  const guestAmount = Number(booking.guest_amount || 0);
+  const guestRate = Number(booking.guest_rate || 0);
   const refreshmentAmount = Number(booking.refreshment_amount || 0);
+  const refreshmentRate = Number(booking.refreshment_rate || 0);
+  const refreshmentType = booking.refreshment_type ?? "none";
   const hallTypeAmount = Number(booking.hall_type_amount || 0);
   const hasAddOns =
-    Boolean(booking.refreshment_selected) || refreshmentAmount > 0 || hallTypeAmount > 0;
+    guestAmount > 0 || refreshmentType !== "none" || Boolean(booking.hall_type) || hallTypeAmount > 0;
   const hallPrice = Math.max(
     0,
-    Number(booking.total_price || 0) - refreshmentAmount - hallTypeAmount,
+    Number(booking.total_price || 0) - guestAmount - refreshmentAmount - hallTypeAmount,
   );
+  const refreshmentLabel =
+    refreshmentType === "water"
+      ? t("waterBottles")
+      : refreshmentType === "juice"
+        ? t("juice")
+        : refreshmentType === "both"
+          ? t("waterJuice")
+          : refreshmentType === "custom"
+            ? booking.refreshment_custom_name || t("custom")
+            : t("noRefreshment");
 
   return (
     <div>
@@ -627,10 +641,18 @@ export default function BookingDetailPage() {
                   <dt className="text-white/70">{t("hallPrice")}</dt>
                   <dd className="font-semibold">{formatPKR(hallPrice)}</dd>
                 </div>
-                {booking.refreshment_selected && (
+                {guestAmount > 0 && (
                   <div className="flex justify-between gap-2 border-b border-white/10 pb-3">
                     <dt className="text-white/70">
-                      {t("refreshment")} ({booking.refreshment_guests || 0} × {formatPKR(booking.refreshment_rate || 0)})
+                      {t("guests")} ({booking.guest_count} × {formatPKR(guestRate)})
+                    </dt>
+                    <dd className="font-semibold">{formatPKR(guestAmount)}</dd>
+                  </div>
+                )}
+                {refreshmentType !== "none" && (
+                  <div className="flex justify-between gap-2 border-b border-white/10 pb-3">
+                    <dt className="text-white/70">
+                      {refreshmentLabel} ({booking.refreshment_guests || 0} × {formatPKR(refreshmentRate)})
                     </dt>
                     <dd className="font-semibold">{formatPKR(refreshmentAmount)}</dd>
                   </div>

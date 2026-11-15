@@ -142,6 +142,15 @@ const EN: Dict = {
   noAddOns: "No add-ons",
   remaining: "Remaining",
   advance: "Advance",
+  noRefreshment: "No Refreshment",
+  waterBottles: "Water Bottles",
+  juice: "Juice",
+  waterJuice: "Water + Juice",
+  custom: "Custom",
+  refreshmentWaterPerGuest: "Refreshment — Water (per guest)",
+  refreshmentJuicePerGuest: "Refreshment — Juice (per guest)",
+  refreshmentBothPerGuest: "Refreshment — Water + Juice (per guest)",
+  guestPricePerGuest: "Guest Price (per guest)",
 };
 
 const UR: Dict = {
@@ -273,6 +282,15 @@ const UR: Dict = {
   noAddOns: "کوئی اضافی سہولت نہیں",
   remaining: "بقایا",
   advance: "ایڈوانس",
+  noRefreshment: "ریفریشمنٹ نہیں",
+  waterBottles: "پانی کی بوتلیں",
+  juice: "جوس",
+  waterJuice: "پانی + جوس",
+  custom: "حسبِ ضرورت",
+  refreshmentWaterPerGuest: "ریفریشمنٹ — پانی (فی مہمان)",
+  refreshmentJuicePerGuest: "ریفریشمنٹ — جوس (فی مہمان)",
+  refreshmentBothPerGuest: "ریفریشمنٹ — پانی + جوس (فی مہمان)",
+  guestPricePerGuest: "مہمان قیمت (فی مہمان)",
 };
 
 const DICTS: Record<Language, Dict> = { en: EN, ur: UR };

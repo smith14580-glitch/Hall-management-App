@@ -381,13 +381,16 @@ export async function createBooking(body: Record<string, unknown>): Promise<Book
       balance_amount: Number(body.total_price || 0),
       payment_status: "unpaid",
       status: "pending",
-      refreshment_selected: Boolean(body.refreshment_selected),
+      refreshment_type: (body.refreshment_type as "none" | "water" | "juice" | "both" | "custom") || "none",
+      refreshment_custom_name: (body.refreshment_custom_name as string) || null,
       refreshment_guests: Number(body.refreshment_guests || 0),
       refreshment_rate: Number(body.refreshment_rate || 0),
       refreshment_amount: Number(body.refreshment_amount || 0),
       hall_type: (body.hall_type as "ac" | "non_ac") || "ac",
       hall_type_rate: Number(body.hall_type_rate || 0),
       hall_type_amount: Number(body.hall_type_amount || 0),
+      guest_rate: Number(body.guest_rate || 0),
+      guest_amount: Number(body.guest_amount || 0),
     };
     SAMPLE_BOOKINGS.unshift(created);
     return sample(created);
