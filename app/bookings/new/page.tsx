@@ -232,7 +232,7 @@ export default function NewBookingPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="customer_name" className={labelClass}>Full Name *</label>
-              <input id="customer_name" className={inputClass} {...register("customer_name")} />
+              <input id="customer_name" className={inputClass} placeholder="Customer name likhein" {...register("customer_name")} />
               {errors.customer_name && <p className="mt-1 text-xs text-red-600">{errors.customer_name.message}</p>}
             </div>
             <div>

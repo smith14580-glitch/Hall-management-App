@@ -110,8 +110,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   const getNumber = useCallback(
     (key: string, fallback = 0) => {
-      const v = settings[key] ?? DEFAULT_SETTINGS[key];
-      const n = Number(v);
+      const raw = settings[key] ?? DEFAULT_SETTINGS[key];
+      if (raw === undefined || raw === null || String(raw).trim() === "") return fallback;
+      const n = Number(raw);
       return Number.isFinite(n) ? n : fallback;
     },
     [settings],

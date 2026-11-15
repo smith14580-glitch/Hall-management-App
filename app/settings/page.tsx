@@ -152,7 +152,11 @@ export default function SettingsPage() {
 
     if (!Number.isFinite(dayPrice) || dayPrice <= 0) errs.hall_day_price = "Day price 0 se zyada hona chahiye.";
     if (!Number.isFinite(nightPrice) || nightPrice <= 0) errs.hall_night_price = "Night price 0 se zyada hona chahiye.";
-    if (!Number.isFinite(advance) || advance < 0 || advance > 100) errs.default_advance_percent = "Advance 0 se 100 ke darmiyan hona chahiye.";
+    if (String(values.default_advance_percent ?? "") === "") {
+      errs.default_advance_percent = "Advance % zaroori hai.";
+    } else if (!Number.isFinite(advance) || advance < 0 || advance > 100) {
+      errs.default_advance_percent = "Advance 0 se 100 ke darmiyan hona chahiye.";
+    }
 
     const duty = values.duty_start_time;
     const ds = values.slot_day_start;
