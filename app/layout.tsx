@@ -3,6 +3,7 @@ import { Inter, Noto_Nastaliq_Urdu, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { LanguageProvider } from "@/lib/i18n";
+import { SettingsProvider } from "@/lib/settings";
 import { AppShell } from "@/components/layout";
 import { RegisterSW } from "@/components/RegisterSW";
 import { ToastProvider } from "@/components/toast";
@@ -54,7 +55,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <LanguageProvider>
           <AuthProvider>
             <ToastProvider>
-              <AppShell>{children}</AppShell>
+              <SettingsProvider>
+                <AppShell>{children}</AppShell>
+              </SettingsProvider>
             </ToastProvider>
           </AuthProvider>
         </LanguageProvider>

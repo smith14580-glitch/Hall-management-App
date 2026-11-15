@@ -66,6 +66,8 @@ function demoActive(): boolean {
   return USE_SAMPLE_DATA || !hasSession();
 }
 
+export { demoActive };
+
 function requireLogin(): void {
   if (hasSession()) return;
   if (typeof window !== "undefined") {

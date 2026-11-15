@@ -1,10 +1,12 @@
-"use client";
+﻿"use client";
 
-import React, { useEffect, useCallback, useState } from "react";
-import { ApiError, fetchHalls, fetchSettings, updateHall, updateSetting } from "@/lib/api";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { ApiError, fetchHalls, updateHall } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 import { formatPKR } from "@/lib/format";
-import type { Hall, SettingItem } from "@/lib/types";
+import type { Hall } from "@/lib/types";
+import { useSettings } from "@/lib/settings";
+import { useToast } from "@/components/toast";
 import {
   ConnectionError,
   goldButtonClass,
@@ -15,83 +17,215 @@ import {
 } from "@/components/ui";
 
 const EDITABLE: Array<{ key: string; label: string; hint: string; type?: string }> = [
-  { key: "hall_day_price", label: "Day Price (PKR)", hint: "UNCONFIRMED — client se confirm karna hai (ARCHITECTURE.md Q2)." },
-  { key: "hall_night_price", label: "Night Price (PKR)", hint: "Confirmed: PKR 300,000." },
-  { key: "default_advance_percent", label: "Default Advance (%)", hint: "Default 50% — per booking change ho sakta hai." },
-  { key: "duty_start_time", label: "Duty Start Time", hint: "Default 09:00.", type: "time" },
-  { key: "late_grace_minutes", label: "Late Grace (minutes)", hint: "Default 15 — late after 09:15." },
-  { key: "slot_day_start", label: "Day Slot Start", hint: "Default 12:00.", type: "time" },
-  { key: "slot_day_end", label: "Day Slot End", hint: "Default 16:00.", type: "time" },
-  { key: "slot_night_start", label: "Night Slot Start", hint: "Default 19:00.", type: "time" },
-  { key: "slot_night_end", label: "Night Slot End", hint: "Default 23:00.", type: "time" },
+  { key: "hall_day_price", label: "Day Price (PKR)", hint: "Nayi bookings par lagega. Purani bookings ki price snapshot safe rehti hai." },
+  { key: "hall_night_price", label: "Night Price (PKR)", hint: "Nayi bookings par lagega. Purani bookings ki price snapshot safe rehti hai." },
+  { key: "default_advance_percent", label: "Default Advance (%)", hint: "Default 0–100%. Per booking badal sakte hain." },
+  { key: "duty_start_time", label: "Duty Start Time", hint: "Attendance late calculation isi se hogi.", type: "time" },
+  { key: "late_grace_minutes", label: "Late Grace (minutes)", hint: "Is minutes ke baad late count hoga." },
+  { key: "slot_day_start", label: "Day Slot Start", hint: "Day slot ka start time.", type: "time" },
+  { key: "slot_day_end", label: "Day Slot End", hint: "Day slot ka end time.", type: "time" },
+  { key: "slot_night_start", label: "Night Slot Start", hint: "Night slot ka start time.", type: "time" },
+  { key: "slot_night_end", label: "Night Slot End", hint: "Night slot ka end time.", type: "time" },
 ];
+
+const LABELS: Record<string, string> = {
+  hall_day_price: "Day price",
+  hall_night_price: "Night price",
+  default_advance_percent: "Default advance",
+  duty_start_time: "Duty start",
+  late_grace_minutes: "Late grace",
+  slot_day_start: "Day slot start",
+  slot_day_end: "Day slot end",
+  slot_night_start: "Night slot start",
+  slot_night_end: "Night slot end",
+};
+
+function toMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
 
 export default function SettingsPage() {
   const { t } = useLanguage();
-  const [settings, setSettings] = useState<SettingItem[]>([]);
-  const [hall, setHall] = useState<Hall | null>(null);
+  const toast = useToast();
+  const { settings, saveSettings, refresh } = useSettings();
   const [values, setValues] = useState<Record<string, string>>({});
+  const [initial, setInitial] = useState<Record<string, string>>({});
+  const [hall, setHall] = useState<Hall | null>(null);
+  const [guestCap, setGuestCap] = useState("");
+  const [tableCap, setTableCap] = useState("");
+  const [initialGuestCap, setInitialGuestCap] = useState("");
+  const [initialTableCap, setInitialTableCap] = useState("");
+  const [initialHallDayPrice, setInitialHallDayPrice] = useState("");
+  const [initialHallNightPrice, setInitialHallNightPrice] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const [msg, setMsg] = useState("");
   const [formError, setFormError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
-  const [guestCap, setGuestCap] = useState("");
-  const [tableCap, setTableCap] = useState("");
 
-  // Data loading lives in an Effect Event: effects may call it, and it
-  // always sees the latest state without re-running the effect.
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const loadHall = useCallback(async () => {
     try {
-      const [s, halls] = await Promise.all([
-        fetchSettings(),
-        fetchHalls().catch(() => [] as Hall[]),
-      ]);
-      setSettings(s);
-      const map: Record<string, string> = {};
-      s.forEach((item) => {
-        map[item.key] = item.value;
-      });
-      setValues(map);
+      const halls = await fetchHalls().catch(() => [] as Hall[]);
       if (halls.length > 0) {
         setHall(halls[0]);
-        setGuestCap(halls[0].capacity_guests === null ? "" : String(halls[0].capacity_guests));
-        setTableCap(halls[0].capacity_tables === null ? "" : String(halls[0].capacity_tables));
+        const gc = halls[0].capacity_guests === null ? "" : String(halls[0].capacity_guests);
+        const tc = halls[0].capacity_tables === null ? "" : String(halls[0].capacity_tables);
+        const dp = String(halls[0].day_price ?? "");
+        const np = String(halls[0].night_price ?? "");
+        setGuestCap(gc);
+        setTableCap(tc);
+        setInitialGuestCap(gc);
+        setInitialTableCap(tc);
+        setInitialHallDayPrice(dp);
+        setInitialHallNightPrice(np);
       }
     } catch (err) {
       setError(err);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void (async () => {
-      await load();
+    let active = true;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const s = await refresh();
+        if (!active) return;
+        const map: Record<string, string> = {};
+        EDITABLE.forEach((item) => {
+          map[item.key] = String(s[item.key] ?? "");
+        });
+        setValues(map);
+        setInitial(map);
+        await loadHall();
+      } catch (err) {
+        if (active) setError(err);
+      } finally {
+        if (active) setLoading(false);
+      }
     })();
-  }, [load]);
+    return () => {
+      active = false;
+    };
+  }, [loadHall, refresh]);
+
+  const allSettingsList = useMemo(
+    () => Object.entries(settings).sort(([a], [b]) => a.localeCompare(b)),
+    [settings],
+  );
+
+  const validate = (): Record<string, string> => {
+    const errs: Record<string, string> = {};
+    const dayPrice = Number(values.hall_day_price);
+    const nightPrice = Number(values.hall_night_price);
+    const advance = Number(values.default_advance_percent);
+    const grace = Number(values.late_grace_minutes);
+
+    if (!Number.isFinite(dayPrice) || dayPrice <= 0) errs.hall_day_price = "Day price 0 se zyada hona chahiye.";
+    if (!Number.isFinite(nightPrice) || nightPrice <= 0) errs.hall_night_price = "Night price 0 se zyada hona chahiye.";
+    if (!Number.isFinite(advance) || advance < 0 || advance > 100) errs.default_advance_percent = "Advance 0 se 100 ke darmiyan hona chahiye.";
+
+    const duty = values.duty_start_time;
+    const ds = values.slot_day_start;
+    const de = values.slot_day_end;
+    const ns = values.slot_night_start;
+    const ne = values.slot_night_end;
+    if (!duty) errs.duty_start_time = "Duty start time zaroori hai.";
+    if (!ds) errs.slot_day_start = "Day slot start zaroori hai.";
+    if (!de) errs.slot_day_end = "Day slot end zaroori hai.";
+    if (!ns) errs.slot_night_start = "Night slot start zaroori hai.";
+    if (!ne) errs.slot_night_end = "Night slot end zaroori hai.";
+    if (ds && de && toMinutes(de) <= toMinutes(ds)) errs.slot_day_end = "Day slot end, start se baad hona chahiye.";
+    if (ns && ne && toMinutes(ne) <= toMinutes(ns)) errs.slot_night_end = "Night slot end, start se baad hona chahiye.";
+    if (!Number.isFinite(grace) || grace < 0) errs.late_grace_minutes = "Late grace 0 ya zyada hona chahiye.";
+
+    if (guestCap !== "") {
+      const g = Number(guestCap);
+      if (!Number.isFinite(g) || g <= 0) errs.capacity_guests = "Max guests 0 se zyada hona chahiye.";
+    }
+    if (tableCap !== "") {
+      const tcap = Number(tableCap);
+      if (!Number.isFinite(tcap) || tcap <= 0) errs.capacity_tables = "Total tables 0 se zyada hona chahiye.";
+    }
+    return errs;
+  };
 
   const saveAll = async () => {
     setMsg("");
     setFormError("");
+    const errs = validate();
+    setFieldErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      setFormError("Kuch values galat hain — neeche errors dekhein.");
+      return;
+    }
     setBusy(true);
     try {
+      const updates: Record<string, string> = {};
+      const changedLabels: string[] = [];
       for (const item of EDITABLE) {
-        const v = values[item.key];
-        if (v !== undefined) await updateSetting(item.key, v);
+        const v = String(values[item.key] ?? "");
+        const prev = String(initial[item.key] ?? "");
+        if (v !== prev) {
+          updates[item.key] = v;
+          changedLabels.push(`${LABELS[item.key]}: ${prev || "—"} → ${v}`);
+        }
       }
-      if (hall && (guestCap !== "" || tableCap !== "")) {
-        await updateHall(hall.id, {
-          capacity_guests: guestCap === "" ? null : Number(guestCap),
-          capacity_tables: tableCap === "" ? null : Number(tableCap),
+
+      if (Object.keys(updates).length > 0) {
+        const confirmed = await saveSettings(updates, { syncRemote: true });
+        const nextInitial = { ...initial };
+        Object.keys(updates).forEach((k) => {
+          nextInitial[k] = String(confirmed[k] ?? updates[k]);
         });
+        setInitial(nextInitial);
+        setValues((prev) => ({ ...prev, ...Object.fromEntries(Object.keys(updates).map((k) => [k, nextInitial[k]])) }));
       }
-      setMsg("Settings save ho gayi. Price change purani bookings par asar nahi karta — sirf nayi bookings par lagega.");
-      await load();
+
+      const dayPrice = String(values.hall_day_price ?? "");
+      const nightPrice = String(values.hall_night_price ?? "");
+      const priceChanged = dayPrice !== initialHallDayPrice || nightPrice !== initialHallNightPrice;
+      const capacityChanged = guestCap !== initialGuestCap || tableCap !== initialTableCap;
+      if (hall && (priceChanged || capacityChanged)) {
+        await updateHall(hall.id, {
+          ...(priceChanged
+            ? { day_price: Number(dayPrice), night_price: Number(nightPrice) }
+            : {}),
+          ...(capacityChanged
+            ? {
+                capacity_guests: guestCap === "" ? null : Number(guestCap),
+                capacity_tables: tableCap === "" ? null : Number(tableCap),
+              }
+            : {}),
+        });
+        if (priceChanged) {
+          changedLabels.push(`Hall day price: ${initialHallDayPrice || "—"} → ${dayPrice || "—"}`);
+          changedLabels.push(`Hall night price: ${initialHallNightPrice || "—"} → ${nightPrice || "—"}`);
+          setInitialHallDayPrice(dayPrice);
+          setInitialHallNightPrice(nightPrice);
+          setHall((h) =>
+            h ? { ...h, day_price: Number(dayPrice), night_price: Number(nightPrice) } : h,
+          );
+        }
+        if (guestCap !== initialGuestCap) changedLabels.push(`Max guests: ${initialGuestCap || "—"} → ${guestCap || "—"}`);
+        if (tableCap !== initialTableCap) changedLabels.push(`Total tables: ${initialTableCap || "—"} → ${tableCap || "—"}`);
+        setInitialGuestCap(guestCap);
+        setInitialTableCap(tableCap);
+      }
+
+      await refresh({ syncRemote: true });
+      const detail = changedLabels.length ? ` ${changedLabels.join("; ")}.` : " Koi value change nahi hui.";
+      const successMsg = `Settings saved — nayi values har jagah apply ho gayi hain.${detail}`;
+      setMsg(successMsg);
+      toast.success("Settings saved — nayi values har jagah apply ho gayi hain.");
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Settings save nahi hui.");
+      await refresh().catch(() => undefined);
+      const message = err instanceof ApiError ? err.message : "Settings save nahi hui. Purani values wapas kar di gayi hain.";
+      setFormError(message);
+      toast.error(message);
     } finally {
       setBusy(false);
     }
@@ -102,7 +236,13 @@ export default function SettingsPage() {
     return (
       <div>
         <PageHeader title={t("settings")} />
-        <ConnectionError error={error} onRetry={() => void load()} />
+        <ConnectionError
+          error={error}
+          onRetry={() => {
+            setError(null);
+            void refresh().finally(() => void loadHall());
+          }}
+        />
       </div>
     );
   }
@@ -111,7 +251,7 @@ export default function SettingsPage() {
     <div>
       <PageHeader
         title={t("settings")}
-        subtitle="Hall pricing, advance, slot timings aur duty rules — sab yahan se badalte hain. Koi price code me hardcoded nahi hai."
+        subtitle="Hall pricing, advance, slot timings aur duty rules — sab yahan se badalte hain. Nayi values save ke baad foran apply hoti hain."
         actions={
           <button type="button" data-requires-auth onClick={saveAll} disabled={busy} className={goldButtonClass}>
             {busy ? "Saving…" : t("save")}
@@ -132,17 +272,21 @@ export default function SettingsPage() {
                 <input
                   id={item.key}
                   type="number"
-                  min={0}
+                  min={item.key === "default_advance_percent" ? 0 : 1}
+                  max={item.key === "default_advance_percent" ? 100 : undefined}
                   className={inputClass}
                   value={values[item.key] || ""}
-                  onChange={(e) => setValues((v) => ({ ...v, [item.key]: e.target.value }))}
+                  onChange={(e) => {
+                    setValues((v) => ({ ...v, [item.key]: e.target.value }));
+                    setFieldErrors((fe) => ({ ...fe, [item.key]: "" }));
+                  }}
                 />
+                {fieldErrors[item.key] && <p className="mt-1 text-xs font-semibold text-red-600">{fieldErrors[item.key]}</p>}
                 <p className="mt-1 text-xs text-ink/50">{item.hint}</p>
               </div>
             ))}
             <p className="rounded-lg bg-offwhite px-3 py-2 text-xs text-ink/60">
-              Current: Day {formatPKR(Number(values.hall_day_price || 150000))} · Night{" "}
-              {formatPKR(Number(values.hall_night_price || 300000))}
+              Current: Day {formatPKR(Number(values.hall_day_price || 0))} · Night {formatPKR(Number(values.hall_night_price || 0))}
             </p>
           </div>
         </div>
@@ -150,17 +294,40 @@ export default function SettingsPage() {
         <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
           <h2 className="font-display text-lg font-bold text-charcoal">Hall Capacity</h2>
           <p className="mt-1 text-sm text-ink/60">
-            Capacity set kiye baghair table allocation enforce nahi ho sakti. Ye numbers client se
-            confirm karne hain (ARCHITECTURE.md Q4) — yahan koi number invent nahi kiya gaya.
+            Capacity yahan se set hoti hai — booking/capacity checks current values use karenge.
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="capacity_guests" className={labelClass}>Max Guests</label>
-              <input id="capacity_guests" type="number" min={1} className={inputClass} value={guestCap} onChange={(e) => setGuestCap(e.target.value)} placeholder="e.g. 500" />
+              <input
+                id="capacity_guests"
+                type="number"
+                min={1}
+                className={inputClass}
+                value={guestCap}
+                onChange={(e) => {
+                  setGuestCap(e.target.value);
+                  setFieldErrors((fe) => ({ ...fe, capacity_guests: "" }));
+                }}
+                placeholder="e.g. 500"
+              />
+              {fieldErrors.capacity_guests && <p className="mt-1 text-xs font-semibold text-red-600">{fieldErrors.capacity_guests}</p>}
             </div>
             <div>
               <label htmlFor="capacity_tables" className={labelClass}>Total Tables</label>
-              <input id="capacity_tables" type="number" min={1} className={inputClass} value={tableCap} onChange={(e) => setTableCap(e.target.value)} placeholder="e.g. 50" />
+              <input
+                id="capacity_tables"
+                type="number"
+                min={1}
+                className={inputClass}
+                value={tableCap}
+                onChange={(e) => {
+                  setTableCap(e.target.value);
+                  setFieldErrors((fe) => ({ ...fe, capacity_tables: "" }));
+                }}
+                placeholder="e.g. 50"
+              />
+              {fieldErrors.capacity_tables && <p className="mt-1 text-xs font-semibold text-red-600">{fieldErrors.capacity_tables}</p>}
             </div>
           </div>
           {hall && <p className="mt-3 text-xs text-ink/50">Hall: {hall.name}</p>}
@@ -177,8 +344,12 @@ export default function SettingsPage() {
                   type="time"
                   className={inputClass}
                   value={values[item.key] || ""}
-                  onChange={(e) => setValues((v) => ({ ...v, [item.key]: e.target.value }))}
+                  onChange={(e) => {
+                    setValues((v) => ({ ...v, [item.key]: e.target.value }));
+                    setFieldErrors((fe) => ({ ...fe, [item.key]: "" }));
+                  }}
                 />
+                {fieldErrors[item.key] && <p className="mt-1 text-xs font-semibold text-red-600">{fieldErrors[item.key]}</p>}
                 <p className="mt-1 text-xs text-ink/50">{item.hint}</p>
               </div>
             ))}
@@ -194,20 +365,25 @@ export default function SettingsPage() {
                 <input
                   id={item.key}
                   type={item.type || "number"}
+                  min={item.type ? undefined : 0}
                   className={inputClass}
                   value={values[item.key] || ""}
-                  onChange={(e) => setValues((v) => ({ ...v, [item.key]: e.target.value }))}
+                  onChange={(e) => {
+                    setValues((v) => ({ ...v, [item.key]: e.target.value }));
+                    setFieldErrors((fe) => ({ ...fe, [item.key]: "" }));
+                  }}
                 />
+                {fieldErrors[item.key] && <p className="mt-1 text-xs font-semibold text-red-600">{fieldErrors[item.key]}</p>}
                 <p className="mt-1 text-xs text-ink/50">{item.hint}</p>
               </div>
             ))}
           </div>
           <h3 className="mt-6 font-display text-base font-bold text-charcoal">All Settings (read-only list)</h3>
           <ul className="mt-3 space-y-1 text-xs">
-            {settings.map((s) => (
-              <li key={s.key} className="flex justify-between gap-3 border-b border-stone-line pb-1">
-                <span className="font-mono text-ink/70">{s.key}</span>
-                <span className="font-semibold text-charcoal">{s.value}</span>
+            {allSettingsList.map(([key, value]) => (
+              <li key={key} className="flex justify-between gap-3 border-b border-stone-line pb-1">
+                <span className="font-mono text-ink/70">{key}</span>
+                <span className="font-semibold text-charcoal">{String(value)}</span>
               </li>
             ))}
           </ul>

@@ -14,6 +14,7 @@ import {
   updateQuotationTemplate,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useSettings } from "@/lib/settings";
 import { useToast } from "@/components/toast";
 import { formatDate, todayISO } from "@/lib/format";
 import type { Hall, Quotation, QuotationTemplate } from "@/lib/types";
@@ -90,6 +91,7 @@ export default function QuotationsPage() {
   const { isManager, isDemo } = useAuth();
   const toast = useToast();
   const router = useRouter();
+  const { getValue, getNumber } = useSettings();
   const [tab, setTab] = useState<"new" | "template">("new");
   const [template, setTemplate] = useState<QuotationTemplate | null>(null);
   const [halls, setHalls] = useState<Hall[]>([]);
@@ -184,7 +186,7 @@ export default function QuotationsPage() {
   }, [isManager, isDemo, reloadList]);
 
   const selectedHall = halls.find((h) => h.id === hallId) || halls[0];
-  const packagePrice = slot === "day" ? selectedHall?.day_price : selectedHall?.night_price;
+  const packagePrice = slot === "day" ? getNumber("hall_day_price") : getNumber("hall_night_price");
 
   const preview = useMemo(() => {
     if (!template) return "";
@@ -203,10 +205,10 @@ export default function QuotationsPage() {
       guest_count: guestCount || "",
       hall_name: selectedHall?.name || "MARQUE ONE",
       package_price: packagePrice ? `PKR ${Number(packagePrice).toLocaleString("en-US")}` : "",
-      advance_percent: "50",
+      advance_percent: String(getNumber("default_advance_percent")),
       valid_until: fmtDateInput(validUntil),
     });
-  }, [template, clientName, source, eventType, eventDate, slot, guestCount, selectedHall, packagePrice]);
+  }, [template, clientName, source, eventType, eventDate, slot, guestCount, selectedHall, packagePrice, getNumber]);
 
   const onSend = async () => {
     setFormError("");
@@ -410,8 +412,8 @@ export default function QuotationsPage() {
                 <div>
                   <label className={labelClass}>Slot</label>
                   <select value={slot} onChange={(e) => setSlot(e.target.value as "day" | "night")} className={inputClass}>
-                    <option value="day">Day (12:00–4:00)</option>
-                    <option value="night">Night (7:00–11:00)</option>
+                    <option value="day">Day ({getValue("slot_day_start")}–{getValue("slot_day_end")})</option>
+                    <option value="night">Night ({getValue("slot_night_start")}–{getValue("slot_night_end")})</option>
                   </select>
                 </div>
               </div>
@@ -518,7 +520,7 @@ export default function QuotationsPage() {
                 <button type="button" onClick={() => window.print()} className={secondaryButtonClass}>
                   <Printer className="h-4 w-4" /> Print / Save PDF
                 </button>
-                <button type="button" onClick={() => router.push(`/bookings/new?client_name=${encodeURIComponent(viewQ.client_name)}&client_phone=${encodeURIComponent(viewQ.client_phone)}&event_type=${encodeURIComponent(String(viewQ.event_type ?? ""))}&event_date=${encodeURIComponent(String(viewQ.event_date ?? ""))}&slot=${viewQ.slot || "day"}&guest_count=${viewQ.guest_count || ""}&hall_name=${viewQ.hall_name || "MARQUE ONE"}&advance_percent=${String(viewQ.advance_percent ?? 50)}`)} className={goldButtonClass}>
+                <button type="button" onClick={() => router.push(`/bookings/new?client_name=${encodeURIComponent(viewQ.client_name)}&client_phone=${encodeURIComponent(viewQ.client_phone)}&event_type=${encodeURIComponent(String(viewQ.event_type ?? ""))}&event_date=${encodeURIComponent(String(viewQ.event_date ?? ""))}&slot=${viewQ.slot || "day"}&guest_count=${viewQ.guest_count || ""}&hall_name=${viewQ.hall_name || "MARQUE ONE"}&advance_percent=${String(viewQ.advance_percent ?? getNumber("default_advance_percent"))}`)} className={goldButtonClass}>
                   <MessageSquare className="h-4 w-4" /> Convert to Booking
                 </button>
                 <button type="button" onClick={() => resend(viewQ)} className={goldButtonClass}>

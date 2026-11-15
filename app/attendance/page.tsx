@@ -15,6 +15,7 @@ import {
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useLanguage } from "@/lib/i18n";
+import { useSettings } from "@/lib/settings";
 import { formatDate, formatTime, formatWorkingMinutes, monthISO, todayISO } from "@/lib/format";
 import type { AttendanceRow, Employee } from "@/lib/types";
 import {
@@ -34,7 +35,16 @@ import {
 export default function AttendancePage() {
   const { user, isManager, isDemo } = useAuth();
   const { t } = useLanguage();
+  const { getValue, getNumber } = useSettings();
   const showManager = isManager || isDemo;
+  const dutyStart = getValue("duty_start_time");
+  const graceMinutes = getNumber("late_grace_minutes");
+  const lateAfter = (() => {
+    const [h, m] = dutyStart.split(":").map(Number);
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return dutyStart;
+    const total = h * 60 + m + graceMinutes;
+    return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+  })();
   const [rows, setRows] = useState<AttendanceRow[]>([]);
   const [myRows, setMyRows] = useState<AttendanceRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -475,7 +485,7 @@ export default function AttendancePage() {
                   </>
                 )}
                 <p className="mt-4 text-xs text-ink/50">
-                  Late rule (default): duty start 09:00, 15-minute grace — late after 09:15. Settings me change ho sakta hai.
+                  Late rule: duty start {dutyStart}, {graceMinutes}-minute grace — late after {lateAfter}. Settings me change ho sakta hai.
                 </p>
               </div>
 

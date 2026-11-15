@@ -4,6 +4,7 @@ import React, { useEffect, useCallback, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { fetchAvailability, fetchBookings } from "@/lib/api";
+import { useSettings } from "@/lib/settings";
 import { useLanguage } from "@/lib/i18n";
 import { formatDate, formatPKR } from "@/lib/format";
 import type { AvailabilityDay, Booking } from "@/lib/types";
@@ -25,6 +26,7 @@ function monthKey(d: Date): string {
 
 export default function CalendarPage() {
   const { t } = useLanguage();
+  const { getValue } = useSettings();
   const [cursor, setCursor] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -170,7 +172,9 @@ export default function CalendarPage() {
                 );
               })}
             </div>
-            <p className="mt-3 text-xs text-ink/50">D = Day slot (12:00–16:00) · N = Night slot (19:00–23:00). Default timings — Settings me change ho sakte hain.</p>
+            <p className="mt-3 text-xs text-ink/50">
+              D = Day slot ({getValue("slot_day_start")}–{getValue("slot_day_end")}) · N = Night slot ({getValue("slot_night_start")}–{getValue("slot_night_end")}). Settings me change ho sakte hain.
+            </p>
           </div>
 
           <div className="h-fit rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-line lg:sticky lg:top-24">

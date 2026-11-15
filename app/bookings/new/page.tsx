@@ -10,6 +10,7 @@ import { ApiError, checkAvailability, createBooking, fetchHalls, fetchPricing } 
 import { useLanguage } from "@/lib/i18n";
 import { formatPKR, todayISO } from "@/lib/format";
 import { EVENT_TYPES, type Pricing } from "@/lib/types";
+import { useSettings } from "@/lib/settings";
 import {
   ConnectionError,
   goldButtonClass,
@@ -39,6 +40,7 @@ type FormValues = z.infer<typeof schema>;
 export default function NewBookingPage() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { getValue, getNumber } = useSettings();
   const [pricing, setPricing] = useState<Pricing | null>(null);
   const [hallId, setHallId] = useState("");
   const [loadError, setLoadError] = useState<unknown>(null);
@@ -76,7 +78,9 @@ export default function NewBookingPage() {
         if (cancelled) return;
         setPricing(p);
         if (halls.length > 0) setHallId(halls[0].id);
-        setValue("advance_amount", Math.round((p.night_price * 50) / 100));
+        const advancePercent = getNumber("default_advance_percent", 50);
+        const nightPrice = getNumber("hall_night_price", p.night_price);
+        setValue("advance_amount", Math.round((nightPrice * advancePercent) / 100));
       } catch (err) {
         if (!cancelled) setLoadError(err);
       } finally {
@@ -94,7 +98,7 @@ export default function NewBookingPage() {
     return () => {
       cancelled = true;
     };
-  }, [setValue]);
+  }, [setValue, getNumber]);
 
   // Live availability check when date/slot change. All state updates
   // happen inside the async callback, never synchronously in the effect.
@@ -125,7 +129,10 @@ export default function NewBookingPage() {
     };
   }, [hallId, eventDate, slot]);
 
-  const total = pricing ? (slot === "day" ? pricing.day_price : pricing.night_price) : 0;
+  const total =
+    slot === "day"
+      ? getNumber("hall_day_price", pricing?.day_price ?? 0)
+      : getNumber("hall_night_price", pricing?.night_price ?? 0);
   const remaining = Math.max(0, total - (advance || 0));
 
   const onSubmit = async (values: FormValues) => {
@@ -178,7 +185,7 @@ export default function NewBookingPage() {
 
   return (
     <div>
-      <PageHeader title={t("newBooking")} subtitle="Customer, event aur price — sab ek form me. Price hall pricing se khud calculate hota hai." />
+      <PageHeader title={t("newBooking")} subtitle="Customer, event aur price — sab ek form me. Price Settings se khud calculate hota hai." />
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-5 rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line lg:col-span-2">
@@ -228,7 +235,9 @@ export default function NewBookingPage() {
                 {(["day", "night"] as const).map((s) => (
                   <label key={s} className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-semibold ${slot === s ? "border-gold bg-gold-light text-gold-dark" : "border-stone-line bg-white text-charcoal"}`}>
                     <input type="radio" value={s} className="sr-only" {...register("slot")} />
-                    {s === "day" ? `${t("day")} (12:00–16:00)` : `${t("night")} (19:00–23:00)`}
+                    {s === "day"
+                      ? `${t("day")} (${getValue("slot_day_start")}–${getValue("slot_day_end")})`
+                      : `${t("night")} (${getValue("slot_night_start")}–${getValue("slot_night_end")})`}
                   </label>
                 ))}
               </div>
@@ -283,7 +292,7 @@ export default function NewBookingPage() {
               <dd className="font-display text-lg font-bold">{formatPKR(total)}</dd>
             </div>
             <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
-              <label htmlFor="advance_amount" className="text-white/70">Advance (50% default)</label>
+              <label htmlFor="advance_amount" className="text-white/70">Advance ({getNumber("default_advance_percent")}% default)</label>
               <input
                 id="advance_amount"
                 type="number"
@@ -300,9 +309,8 @@ export default function NewBookingPage() {
             </div>
           </dl>
           <p className="mt-5 text-xs leading-relaxed text-white/50">
-            Day price {formatPKR(pricing.day_price)} (unconfirmed — Settings me change ho sakta hai) ·
-            Night price {formatPKR(pricing.night_price)}. Price booking time par snapshot hota hai;
-            baad me price badle to is booking par asar nahi hoga.
+            Day price {formatPKR(getNumber("hall_day_price"))} · Night price {formatPKR(getNumber("hall_night_price"))}.
+            Price booking time par snapshot hota hai; baad me price badle to is booking par asar nahi hoga.
           </p>
         </aside>
       </form>

@@ -216,16 +216,16 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "rounded-xl p-5 shadow-sm ring-1 transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md",
+        "rounded-xl p-3 shadow-sm ring-1 transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-5",
         style.card,
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className={cn("text-xs font-semibold uppercase tracking-wide", style.label)}>{label}</p>
-        {icon && <span className={style.icon}>{icon}</span>}
+      <div className="flex items-start justify-between gap-1 sm:gap-2">
+        <p className={cn("text-[10px] font-semibold uppercase tracking-wide sm:text-xs", style.label)}>{label}</p>
+        {icon && <span className={cn("shrink-0", style.icon)}>{icon}</span>}
       </div>
-      <p className={cn("mt-2 font-display text-2xl font-bold", style.value)}>{value}</p>
-      {sub && <p className={cn("mt-1 text-xs", style.sub)}>{sub}</p>}
+      <p className={cn("mt-2 break-words font-display text-lg font-bold leading-tight sm:text-2xl", style.value)}>{value}</p>
+      {sub && <p className={cn("mt-1 text-[10px] sm:text-xs", style.sub)}>{sub}</p>}
     </div>
   );
 }
