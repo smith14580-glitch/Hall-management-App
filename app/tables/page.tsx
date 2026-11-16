@@ -2,12 +2,13 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, Pencil, Plus, Printer, RefreshCw, X } from "lucide-react";
+import { Check, Pencil, Plus, Printer, RefreshCw, Trash2, X } from "lucide-react";
 import {
   ApiError,
   activateTable,
   createTable,
   deactivateTable,
+  deleteTable,
   fetchBookingTables,
   fetchBookings,
   fetchHalls,
@@ -22,11 +23,13 @@ import type { Booking, HallTable, TableAllocation } from "@/lib/types";
 import {
   Badge,
   ConnectionError,
+  dangerButtonClass,
   EmptyState,
   goldButtonClass,
   inputClass,
   labelClass,
   LoadingState,
+  Modal,
   PageHeader,
   secondaryButtonClass,
   StatCard,
@@ -58,6 +61,9 @@ export default function TablesPage() {
   const [utilMonth, setUtilMonth] = useState(() => monthISO(new Date()));
   const [util, setUtil] = useState<TableUtilization | null>(null);
   const [utilLoading, setUtilLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<HallTable | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -230,6 +236,23 @@ export default function TablesPage() {
       setFormError(err instanceof ApiError ? err.message : "Table update nahi hui.");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteBusy(true);
+    setDeleteError("");
+    try {
+      await deleteTable(deleteTarget.id);
+      setDeleteTarget(null);
+      await load();
+      await loadBoard();
+      await loadUtilization();
+    } catch (err) {
+      setDeleteError(err instanceof ApiError ? err.message : "Table delete nahi hui.");
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -463,6 +486,17 @@ export default function TablesPage() {
                               <button type="button" data-requires-auth onClick={() => void toggleActive(row)} className={secondaryButtonClass}>
                                 {row.is_active ? "Deactivate" : "Activate"}
                               </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDeleteError("");
+                                  setDeleteTarget(row);
+                                }}
+                                className={`${dangerButtonClass} px-3`}
+                                aria-label={`Delete ${row.table_number}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
                             </>
                           )}
                         </div>
@@ -474,6 +508,24 @@ export default function TablesPage() {
             )}
           </div>
         </>
+      )}
+
+      {deleteTarget && (
+        <Modal title="Delete table" onClose={() => (deleteBusy ? null : setDeleteTarget(null))}>
+          <p className="text-sm text-ink/70">
+            <span className="font-semibold text-charcoal">{deleteTarget.table_number}</span> permanently delete karni hai?
+            Agar is table par koi booking allocation hai to delete block ho jayega — us case me Deactivate use karo.
+          </p>
+          {deleteError && <p className="mt-3 text-sm text-red-600" role="alert">{deleteError}</p>}
+          <div className="mt-5 flex justify-end gap-2">
+            <button type="button" onClick={() => setDeleteTarget(null)} disabled={deleteBusy} className={secondaryButtonClass}>
+              Cancel
+            </button>
+            <button type="button" data-requires-auth onClick={() => void confirmDelete()} disabled={deleteBusy} className={dangerButtonClass}>
+              <Trash2 className="h-4 w-4" /> {deleteBusy ? "Deleting…" : "Delete table"}
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );

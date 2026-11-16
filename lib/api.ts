@@ -763,6 +763,16 @@ export async function createTable(body: Record<string, unknown>): Promise<HallTa
   return apiFetch<HallTable>("/tables", { method: "POST", body });
 }
 
+export async function deleteTable(id: string): Promise<void> {
+  requireLogin();
+  if (demoActive()) {
+    const index = SAMPLE_TABLES.findIndex((t) => t.id === id);
+    if (index >= 0) SAMPLE_TABLES.splice(index, 1);
+    return sample(undefined);
+  }
+  await apiFetch(`/tables/${id}`, { method: "DELETE" });
+}
+
 export async function updateTable(id: string, body: Record<string, unknown>): Promise<HallTable> {
   requireLogin();
   if (demoActive()) {
