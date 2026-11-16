@@ -514,6 +514,18 @@ export async function fetchCustomerSummary(id: string): Promise<CustomerSummary>
 }
 
 // ---------- Halls & pricing (§4.4) ----------
+export async function resetDemoData(): Promise<void> {
+  requireLogin();
+  if (demoActive()) {
+    SAMPLE_BOOKINGS.length = 0;
+    SAMPLE_PAYMENTS.length = 0;
+    SAMPLE_CUSTOMERS.length = 0;
+    SAMPLE_ATTENDANCE.length = 0;
+    return sample(undefined);
+  }
+  await apiFetch("/maintenance/demo-data", { method: "DELETE" });
+}
+
 export async function fetchHalls(): Promise<Hall[]> {
   if (demoActive()) return sample([SAMPLE_HALL]);
   return asArray<Hall>(await apiFetch<unknown>("/halls"));
