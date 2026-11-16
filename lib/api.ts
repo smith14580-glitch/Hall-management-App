@@ -718,6 +718,43 @@ export async function fetchTables(hallId?: string): Promise<HallTable[]> {
   return asArray<HallTable>(await apiFetch<unknown>(`/tables${q}`));
 }
 
+export interface TableUtilizationRow {
+  table_id: string;
+  table_number: string;
+  capacity: number;
+  is_active: boolean;
+  booked_events: number;
+  utilization_percent: number;
+}
+
+export interface TableUtilization {
+  month: string;
+  days: number;
+  total_slots: number;
+  booked_events: number;
+  tables: TableUtilizationRow[];
+}
+
+export async function fetchTableUtilization(month: string): Promise<TableUtilization> {
+  if (demoActive()) {
+    return sample({
+      month,
+      days: 30,
+      total_slots: 60,
+      booked_events: 0,
+      tables: SAMPLE_TABLES.map((table) => ({
+        table_id: table.id,
+        table_number: table.table_number,
+        capacity: table.capacity,
+        is_active: table.is_active,
+        booked_events: 0,
+        utilization_percent: 0,
+      })),
+    });
+  }
+  return apiFetch<TableUtilization>(`/tables/utilization?month=${encodeURIComponent(month)}`);
+}
+
 export async function createTable(body: Record<string, unknown>): Promise<HallTable> {
   requireLogin();
   if (demoActive()) {

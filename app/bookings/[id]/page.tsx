@@ -15,6 +15,7 @@ import {
   fetchBookingPayments,
   fetchBookingRefunds,
   fetchBookingTables,
+  fetchBookings,
   fetchTables,
   normalizePhone,
   recordPayment,
@@ -92,6 +93,7 @@ export default function BookingDetailPage() {
   const [refundBusy, setRefundBusy] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [selectedTables, setSelectedTables] = useState<string[]>([]);
+  const [takenTableIds, setTakenTableIds] = useState<string[]>([]);
   const [tableBusy, setTableBusy] = useState(false);
 
   const {
@@ -123,6 +125,12 @@ export default function BookingDetailPage() {
       setTables(tbls);
       setAllocated(alloc);
       setSelectedTables(alloc.map((a) => a.table_id));
+      const sameSlot = await fetchBookings({ event_date: b.event_date, slot: b.slot }).catch(() => [] as Booking[]);
+      const others = sameSlot.filter((x) => x.id !== b.id && x.status !== "cancelled");
+      const conflictLists = await Promise.all(
+        others.map((x) => fetchBookingTables(x.id).catch(() => [] as TableAllocation[])),
+      );
+      setTakenTableIds(conflictLists.flat().map((a) => a.table_id));
     } catch (err) {
       setError(err);
     } finally {
@@ -220,6 +228,22 @@ export default function BookingDetailPage() {
     } finally {
       setRefundBusy(false);
     }
+  };
+
+  const autoSelectTables = () => {
+    if (!booking) return;
+    const available = tables.filter(
+      (t) => t.is_active && (!takenTableIds.includes(t.id) || selectedTables.includes(t.id)),
+    );
+    const sorted = [...available].sort((a, b) => a.capacity - b.capacity);
+    const picked: string[] = [];
+    let seats = 0;
+    for (const table of sorted) {
+      if (seats >= booking.guest_count) break;
+      picked.push(table.id);
+      seats += table.capacity;
+    }
+    setSelectedTables(picked);
   };
 
   const onSaveTables = async () => {
@@ -609,14 +633,31 @@ export default function BookingDetailPage() {
               <p className="mt-4 text-sm text-ink/60">No tables defined yet — add tables from the Tables page first.</p>
             ) : (
               <>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button type="button" data-requires-auth onClick={autoSelectTables} className={secondaryButtonClass}>
+                    Auto-select best fit
+                  </button>
+                  {takenTableIds.length > 0 && (
+                    <span className="self-center text-xs font-semibold text-amber-700">
+                      {takenTableIds.length} table(s) already taken in this slot
+                    </span>
+                  )}
+                </div>
                 <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
                   {tables.filter((t) => t.is_active).map((t) => {
                     const checked = selectedTables.includes(t.id);
+                    const takenByOther = takenTableIds.includes(t.id) && !checked;
                     return (
-                      <label key={t.id} className={`flex cursor-pointer flex-col items-center rounded-lg border px-2 py-3 text-sm ${checked ? "border-gold bg-gold-light font-semibold text-gold-dark" : "border-stone-line bg-white text-charcoal"}`}>
-                        <input type="checkbox" className="sr-only" checked={checked} onChange={() => setSelectedTables((prev) => (checked ? prev.filter((x) => x !== t.id) : [...prev, t.id]))} />
+                      <label key={t.id} className={`flex flex-col items-center rounded-lg border px-2 py-3 text-sm ${takenByOther ? "cursor-not-allowed border-stone-line bg-stone-100 text-ink/40" : checked ? "cursor-pointer border-gold bg-gold-light font-semibold text-gold-dark" : "cursor-pointer border-stone-line bg-white text-charcoal"}`}>
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={checked}
+                          disabled={takenByOther}
+                          onChange={() => setSelectedTables((prev) => (checked ? prev.filter((x) => x !== t.id) : [...prev, t.id]))}
+                        />
                         {t.table_number}
-                        <span className="text-xs text-ink/50">{t.capacity} seats</span>
+                        <span className="text-xs text-ink/50">{takenByOther ? "Taken" : `${t.capacity} seats`}</span>
                       </label>
                     );
                   })}
