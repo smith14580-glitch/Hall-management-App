@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ApiError, fetchHalls, updateHall } from "@/lib/api";
+import { ApiError, fetchHalls, resetDemoData, updateHall } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 import { formatPKR } from "@/lib/format";
 import type { Hall } from "@/lib/types";
@@ -9,11 +9,14 @@ import { useSettings } from "@/lib/settings";
 import { useToast } from "@/components/toast";
 import {
   ConnectionError,
+  dangerButtonClass,
   goldButtonClass,
   inputClass,
   labelClass,
   LoadingState,
+  Modal,
   PageHeader,
+  secondaryButtonClass,
 } from "@/components/ui";
 
 const EDITABLE: Array<{ key: string; label: string; hint: string; type?: string }> = [
@@ -90,6 +93,27 @@ export default function SettingsPage() {
   const [formError, setFormError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetMsg, setResetMsg] = useState("");
+  const [resetError, setResetError] = useState("");
+  const [showReset, setShowReset] = useState(false);
+
+  const onResetData = async () => {
+    setResetBusy(true);
+    setResetMsg("");
+    setResetError("");
+    try {
+      await resetDemoData();
+      setResetMsg("Sample/demo bookings, payments, expenses, attendance and customers cleared.");
+      await refresh();
+      await loadHall();
+    } catch (err) {
+      setResetError(err instanceof ApiError ? err.message : "Data reset nahi ho saka.");
+    } finally {
+      setResetBusy(false);
+      setShowReset(false);
+    }
+  };
 
   const loadHall = useCallback(async () => {
     try {
@@ -286,6 +310,38 @@ export default function SettingsPage() {
   }
 
   return (
+    <>
+      <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-6 shadow-sm">
+        <h2 className="font-display text-lg font-bold text-red-800">Danger zone</h2>
+        <p className="mt-1 text-sm text-red-700">
+          Sample/demo data clear karne ke liye. Real production data delete nahi hoga — sirf demo entries remove hongi.
+        </p>
+        {resetMsg && <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">{resetMsg}</p>}
+        {resetError && <p className="mt-3 rounded-lg bg-red-100 px-3 py-2 text-sm font-semibold text-red-800">{resetError}</p>}
+        <button type="button" onClick={() => setShowReset(true)} className={`${dangerButtonClass} mt-4`}>
+          Clear demo data
+        </button>
+      </div>
+
+      {showReset && (
+        <Modal title="Clear demo data" onClose={() => (resetBusy ? null : setShowReset(false))}>
+          <p className="text-sm text-ink/70">
+            Demo bookings, payments, expenses, attendance aur customers delete ho jayenge. Settings aur tables safe rahenge.
+          </p>
+          <div className="mt-5 flex justify-end gap-2">
+            <button type="button" onClick={() => setShowReset(false)} disabled={resetBusy} className={secondaryButtonClass}>
+              Cancel
+            </button>
+            <button type="button" data-requires-auth onClick={() => void onResetData()} disabled={resetBusy} className={dangerButtonClass}>
+              {resetBusy ? "Clearing…" : "Clear demo data"}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+
+  return (
     <div>
       <PageHeader
         title={t("settings")}
@@ -414,7 +470,7 @@ export default function SettingsPage() {
               {fieldErrors.capacity_tables && <p className="mt-1 text-xs font-semibold text-red-600">{fieldErrors.capacity_tables}</p>}
             </div>
           </div>
-          {hall && <p className="mt-3 text-xs text-ink/50">Hall: {hall.name}</p>}
+          {hall !== null ? <p className="mt-3 text-xs text-ink/50">Hall: {hall!.name}</p> : null}
         </div>
 
         <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
