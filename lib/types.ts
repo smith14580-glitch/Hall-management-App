@@ -60,6 +60,7 @@ export interface Booking {
   customer?: Customer;
   customer_name?: string;
   customer_phone?: string;
+  customer_address?: string | null;
   hall_id: string;
   hall_name?: string;
   event_type: string;

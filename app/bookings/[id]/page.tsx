@@ -376,8 +376,9 @@ export default function BookingDetailPage() {
               <Badge tone="gold">{booking.slot === "day" ? "Day Slot" : "Night Slot"}</Badge>
             </div>
             <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
-              <div><dt className="text-ink/50">Customer</dt><dd className="font-semibold text-charcoal">{booking.customer_name || "—"}</dd></div>
-              <div><dt className="text-ink/50">Phone</dt><dd className="font-semibold text-charcoal" dir="ltr">{booking.customer_phone || "—"}</dd></div>
+               <div><dt className="text-ink/50">Customer</dt><dd className="font-semibold text-charcoal">{booking.customer_name || "—"}</dd></div>
+               <div><dt className="text-ink/50">Phone</dt><dd className="font-semibold text-charcoal" dir="ltr">{booking.customer_phone || "—"}</dd></div>
+               <div><dt className="text-ink/50">Address</dt><dd className="font-semibold text-charcoal">{booking.customer_address || "—"}</dd></div>
               <div><dt className="text-ink/50">Event Date</dt><dd className="font-semibold text-charcoal">{formatDate(booking.event_date)}</dd></div>
               <div><dt className="text-ink/50">Guests / Tables</dt><dd className="font-semibold text-charcoal">{booking.guest_count} guests · {booking.tables_required} tables</dd></div>
               <div><dt className="text-ink/50">Hall</dt><dd className="font-semibold text-charcoal">{booking.hall_name || "MARQUE ONE"}</dd></div>
