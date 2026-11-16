@@ -1,9 +1,11 @@
 // Formatting helpers. Money is always shown as "PKR 300,000" (ARCHITECTURE.md §7.3).
 // Dates are displayed in Pakistan local time (Asia/Karachi).
 
-export function formatPKR(amount: number | null | undefined): string {
-  if (amount === null || amount === undefined || Number.isNaN(amount)) return "PKR 0";
-  const rounded = Math.round(amount * 100) / 100;
+export function formatPKR(amount: number | string | null | undefined): string {
+  const value =
+    typeof amount === "string" ? Number(amount.replace(/,/g, "").trim()) : amount;
+  if (value === null || value === undefined || !Number.isFinite(value)) return "PKR 0";
+  const rounded = Math.round(value * 100) / 100;
   const text = Number.isInteger(rounded)
     ? rounded.toLocaleString("en-US")
     : rounded.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
