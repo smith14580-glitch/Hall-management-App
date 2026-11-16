@@ -49,6 +49,7 @@ export default function TablesPage() {
   const [busy, setBusy] = useState(false);
 
   const [bulk, setBulk] = useState({ prefix: "T-", start: 1, end: 10, capacity: 10 });
+  const [bulkMsg, setBulkMsg] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
   const [editNumber, setEditNumber] = useState("");
   const [editCapacity, setEditCapacity] = useState(10);
@@ -64,6 +65,7 @@ export default function TablesPage() {
   const [deleteTarget, setDeleteTarget] = useState<HallTable | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [deleteForce, setDeleteForce] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -171,25 +173,54 @@ export default function TablesPage() {
   const onBulkAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
-    if (bulk.start < 1 || bulk.end < bulk.start) {
-      setFormError("Bulk range sahi likho (start ≤ end).");
+    setBulkMsg("");
+    if (
+      !Number.isFinite(bulk.start) ||
+      !Number.isFinite(bulk.end) ||
+      !Number.isFinite(bulk.capacity) ||
+      bulk.start < 1 ||
+      bulk.end < bulk.start ||
+      bulk.capacity < 1
+    ) {
+      setFormError("Bulk range aur seats sahi likho (start ≤ end).");
       return;
     }
     if (bulk.end - bulk.start + 1 > 100) {
       setFormError("Ek waqt me 100 se zyada tables add na karo.");
       return;
     }
-    setBusy(true);
-    try {
-      for (let i = bulk.start; i <= bulk.end; i += 1) {
-        const tableNumber = `${bulk.prefix}${String(i).padStart(2, "0")}`;
-        await createTable({ table_number: tableNumber, capacity: bulk.capacity });
+    const existing = new Set(rows.map((row) => row.table_number.toLowerCase()));
+    const pending: string[] = [];
+    let skipped = 0;
+    for (let i = bulk.start; i <= bulk.end; i += 1) {
+      const tableNumber = `${bulk.prefix}${String(i).padStart(2, "0")}`;
+      if (existing.has(tableNumber.toLowerCase())) {
+        skipped += 1;
+      } else {
+        pending.push(tableNumber);
       }
+    }
+    if (pending.length === 0) {
+      setBulkMsg(`${skipped} table number(s) pehle se exist karte hain — prefix ya range change karo.`);
+      return;
+    }
+    setBusy(true);
+    let added = 0;
+    try {
+      for (const tableNumber of pending) {
+        await createTable({ table_number: tableNumber, capacity: bulk.capacity });
+        added += 1;
+      }
+      setBulkMsg(
+        `${added} table(s) add ho gaye${skipped ? `, ${skipped} skipped (already exist)` : ""}.`,
+      );
       await load();
       await loadBoard();
       await loadUtilization();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Bulk add adhoora raha — duplicate numbers check karo.");
+      setBulkMsg(
+        `${added} table(s) add hue; baqi fail: ${err instanceof ApiError ? err.message : "unknown error"}`,
+      );
       await load();
       await loadUtilization();
     } finally {
@@ -244,8 +275,9 @@ export default function TablesPage() {
     setDeleteBusy(true);
     setDeleteError("");
     try {
-      await deleteTable(deleteTarget.id);
+      await deleteTable(deleteTarget.id, deleteForce);
       setDeleteTarget(null);
+      setDeleteForce(false);
       await load();
       await loadBoard();
       await loadUtilization();
@@ -328,6 +360,7 @@ export default function TablesPage() {
             </form>
           </div>
           {formError && <p className="mt-3 text-sm text-red-600" role="alert">{formError}</p>}
+          {bulkMsg && <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800" role="status">{bulkMsg}</p>}
 
           <div className="print-area mt-6 rounded-xl bg-white p-4 shadow-sm ring-1 ring-stone-line sm:p-5">
             <div className="flex flex-wrap items-end gap-3 print:hidden">
@@ -481,6 +514,7 @@ export default function TablesPage() {
                                 type="button"
                                 onClick={() => {
                                   setDeleteError("");
+                                  setDeleteForce(false);
                                   setDeleteTarget(row);
                                 }}
                                 className={dangerButtonClass}
@@ -500,6 +534,7 @@ export default function TablesPage() {
                                 type="button"
                                 onClick={() => {
                                   setDeleteError("");
+                                  setDeleteForce(false);
                                   setDeleteTarget(row);
                                 }}
                                 className={dangerButtonClass}
@@ -524,15 +559,27 @@ export default function TablesPage() {
         <Modal title="Delete table" onClose={() => (deleteBusy ? null : setDeleteTarget(null))}>
           <p className="text-sm text-ink/70">
             <span className="font-semibold text-charcoal">{deleteTarget.table_number}</span> permanently delete karni hai?
-            Agar is table par koi booking allocation hai to delete block ho jayega — us case me Deactivate use karo.
+            Agar is table par booking allocation history hai to neeche force delete tick karo — warning ke saath.
           </p>
+          <label className="mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+            <input
+              type="checkbox"
+              checked={deleteForce}
+              onChange={(e) => setDeleteForce(e.target.checked)}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>
+              Force delete: is table ki old booking allocations bhi delete ho jayengi.
+              Sirf tab use karo jab table permanently hata rahe ho.
+            </span>
+          </label>
           {deleteError && <p className="mt-3 text-sm text-red-600" role="alert">{deleteError}</p>}
-          <div className="mt-5 flex justify-end gap-2">
+          <div className="mt-5 flex flex-wrap justify-end gap-2">
             <button type="button" onClick={() => setDeleteTarget(null)} disabled={deleteBusy} className={secondaryButtonClass}>
               Cancel
             </button>
             <button type="button" data-requires-auth onClick={() => void confirmDelete()} disabled={deleteBusy} className={dangerButtonClass}>
-              <Trash2 className="h-4 w-4" /> {deleteBusy ? "Deleting…" : "Delete table"}
+              <Trash2 className="h-4 w-4" /> {deleteBusy ? "Deleting…" : deleteForce ? "Force delete" : "Delete table"}
             </button>
           </div>
         </Modal>

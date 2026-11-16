@@ -758,19 +758,27 @@ export async function fetchTableUtilization(month: string): Promise<TableUtiliza
 export async function createTable(body: Record<string, unknown>): Promise<HallTable> {
   requireLogin();
   if (demoActive()) {
-    return sample({ id: `tbl-${Date.now()}`, hall_id: "hall-1", table_number: String(body.table_number || ""), capacity: Number(body.capacity || 10), is_active: true });
+    const created: HallTable = {
+      id: `tbl-${Date.now()}`,
+      hall_id: "hall-1",
+      table_number: String(body.table_number || ""),
+      capacity: Number(body.capacity || 10),
+      is_active: true,
+    };
+    SAMPLE_TABLES.push(created);
+    return sample(created);
   }
   return apiFetch<HallTable>("/tables", { method: "POST", body });
 }
 
-export async function deleteTable(id: string): Promise<void> {
+export async function deleteTable(id: string, force = false): Promise<void> {
   requireLogin();
   if (demoActive()) {
     const index = SAMPLE_TABLES.findIndex((t) => t.id === id);
     if (index >= 0) SAMPLE_TABLES.splice(index, 1);
     return sample(undefined);
   }
-  await apiFetch(`/tables/${id}`, { method: "DELETE" });
+  await apiFetch(`/tables/${id}${force ? "?force=true" : ""}`, { method: "DELETE" });
 }
 
 export async function updateTable(id: string, body: Record<string, unknown>): Promise<HallTable> {
@@ -778,7 +786,8 @@ export async function updateTable(id: string, body: Record<string, unknown>): Pr
   if (demoActive()) {
     const t = SAMPLE_TABLES.find((x) => x.id === id);
     if (!t) throw new ApiError(404, "NOT_FOUND", "Table nahi mili.");
-    return sample({ ...t, ...body } as HallTable);
+    Object.assign(t, body);
+    return sample({ ...t } as HallTable);
   }
   return apiFetch<HallTable>(`/tables/${id}`, { method: "PATCH", body });
 }
@@ -788,14 +797,19 @@ export async function activateTable(id: string): Promise<HallTable> {
   if (demoActive()) {
     const t = SAMPLE_TABLES.find((x) => x.id === id);
     if (!t) throw new ApiError(404, "NOT_FOUND", "Table nahi mili.");
-    return sample({ ...t, is_active: true } as HallTable);
+    t.is_active = true;
+    return sample({ ...t } as HallTable);
   }
   return apiFetch<HallTable>(`/tables/${id}/activate`, { method: "POST" });
 }
 
 export async function deactivateTable(id: string): Promise<void> {
   requireLogin();
-  if (demoActive()) return sample(undefined);
+  if (demoActive()) {
+    const t = SAMPLE_TABLES.find((x) => x.id === id);
+    if (t) t.is_active = false;
+    return sample(undefined);
+  }
   await apiFetch(`/tables/${id}/deactivate`, { method: "POST" });
 }
 
