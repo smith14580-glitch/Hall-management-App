@@ -885,6 +885,16 @@ export async function deactivateEmployee(id: string): Promise<void> {
   await apiFetch(`/employees/${id}/deactivate`, { method: "POST" });
 }
 
+export async function deleteEmployee(id: string, force = false): Promise<void> {
+  requireLogin();
+  if (demoActive()) {
+    const index = SAMPLE_EMPLOYEES.findIndex((e) => e.id === id);
+    if (index >= 0) SAMPLE_EMPLOYEES.splice(index, 1);
+    return sample(undefined);
+  }
+  await apiFetch(`/employees/${id}${force ? "?force=true" : ""}`, { method: "DELETE" });
+}
+
 // ---------- Attendance (§4.9) ----------
 export async function checkIn(): Promise<AttendanceRow> {
   requireLogin();

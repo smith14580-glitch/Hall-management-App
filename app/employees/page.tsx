@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Download, IdCard, Pencil, Plus, Printer, QrCode, Search, Wallet } from "lucide-react";
+import { CheckCircle2, Download, IdCard, Pencil, Plus, Printer, QrCode, Search, Trash2, Wallet } from "lucide-react";
 import {
   ApiError,
   createEmployee,
   deactivateEmployee,
+  deleteEmployee,
   fetchEmployeeSalary,
   fetchEmployees,
   saveEmployeeSalary,
@@ -18,6 +19,7 @@ import { EmployeeIdCard } from "@/components/employee-id-card";
 import {
   Badge,
   ConnectionError,
+  dangerButtonClass,
   EmptyState,
   goldButtonClass,
   inputClass,
@@ -47,6 +49,10 @@ export default function EmployeesPage() {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [deactivating, setDeactivating] = useState<Employee | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteForce, setDeleteForce] = useState(false);
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
   const [fullName, setFullName] = useState("");
@@ -156,6 +162,23 @@ export default function EmployeesPage() {
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "Deactivate nahi ho saka.");
       setDeactivating(null);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteBusy(true);
+    setDeleteError("");
+    try {
+      await deleteEmployee(deleteTarget.id, deleteForce);
+      setRows((prev) => prev.filter((row) => row.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      setDeleteForce(false);
+      await load();
+    } catch (err) {
+      setDeleteError(err instanceof ApiError ? err.message : "Employee delete nahi hua.");
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -372,6 +395,17 @@ export default function EmployeesPage() {
                           Deactivate
                         </button>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeleteError("");
+                          setDeleteForce(false);
+                          setDeleteTarget(row);
+                        }}
+                        className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Delete
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -601,6 +635,32 @@ export default function EmployeesPage() {
               Deactivate
             </button>
             <button type="button" onClick={() => setDeactivating(null)} className={secondaryButtonClass}>Cancel</button>
+          </div>
+        </Modal>
+      )}
+
+      {deleteTarget && (
+        <Modal title="Delete Employee" onClose={() => (deleteBusy ? null : setDeleteTarget(null))}>
+          <p className="text-sm text-ink/70">
+            <strong>{deleteTarget.full_name}</strong> ({deleteTarget.employee_code}) permanently delete karna hai?
+          </p>
+          <label className="mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+            <input
+              type="checkbox"
+              checked={deleteForce}
+              onChange={(e) => setDeleteForce(e.target.checked)}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>Force delete: attendance aur salary records bhi delete ho jayenge. Sirf tab use karo jab employee permanently hata rahe ho.</span>
+          </label>
+          {deleteError && <p className="mt-3 text-sm text-red-600" role="alert">{deleteError}</p>}
+          <div className="mt-5 flex justify-end gap-2">
+            <button type="button" onClick={() => setDeleteTarget(null)} disabled={deleteBusy} className={secondaryButtonClass}>
+              Cancel
+            </button>
+            <button type="button" data-requires-auth onClick={() => void confirmDelete()} disabled={deleteBusy} className={dangerButtonClass}>
+              <Trash2 className="h-4 w-4" /> {deleteBusy ? "Deleting…" : deleteForce ? "Force delete" : "Delete"}
+            </button>
           </div>
         </Modal>
       )}
