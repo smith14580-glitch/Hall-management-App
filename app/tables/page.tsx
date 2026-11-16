@@ -477,6 +477,16 @@ export default function TablesPage() {
                               <button type="button" onClick={() => setEditId(null)} className={secondaryButtonClass}>
                                 <X className="h-4 w-4" /> Cancel
                               </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDeleteError("");
+                                  setDeleteTarget(row);
+                                }}
+                                className={dangerButtonClass}
+                              >
+                                <Trash2 className="h-4 w-4" /> Delete
+                              </button>
                             </>
                           ) : (
                             <>
@@ -492,10 +502,10 @@ export default function TablesPage() {
                                   setDeleteError("");
                                   setDeleteTarget(row);
                                 }}
-                                className={`${dangerButtonClass} px-3`}
+                                className={dangerButtonClass}
                                 aria-label={`Delete ${row.table_number}`}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-4 w-4" /> Delete
                               </button>
                             </>
                           )}
