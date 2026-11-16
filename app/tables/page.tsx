@@ -48,7 +48,7 @@ export default function TablesPage() {
   const [capacity, setCapacity] = useState(10);
   const [busy, setBusy] = useState(false);
 
-  const [bulk, setBulk] = useState({ prefix: "T-", start: 1, end: 10, capacity: 10 });
+  const [bulk, setBulk] = useState({ prefix: "T-", start: 10, end: 20, capacity: 10 });
   const [bulkMsg, setBulkMsg] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
   const [editNumber, setEditNumber] = useState("");
@@ -342,8 +342,8 @@ export default function TablesPage() {
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
             <form onSubmit={onAdd} className="flex flex-wrap items-end gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-stone-line">
               <div>
-                <label htmlFor="table_number" className={labelClass}>Table Number *</label>
-                <input id="table_number" value={number} onChange={(e) => setNumber(e.target.value)} placeholder="T-13" className={inputClass} />
+                <label htmlFor="bulk_prefix" className={labelClass}>Table prefix</label>
+                <input id="bulk_prefix" value={bulk.prefix} onChange={(e) => setBulk({ ...bulk, prefix: e.target.value })} placeholder="T-" className={inputClass} />
               </div>
               <div>
                 <label htmlFor="table_capacity" className={labelClass}>Seats *</label>
@@ -356,25 +356,24 @@ export default function TablesPage() {
 
             <form onSubmit={onBulkAdd} className="flex flex-wrap items-end gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-stone-line">
               <div>
-                <label htmlFor="bulk_prefix" className={labelClass}>Prefix</label>
-                <input id="bulk_prefix" value={bulk.prefix} onChange={(e) => setBulk({ ...bulk, prefix: e.target.value })} placeholder="T-" className={inputClass} />
+                <label htmlFor="bulk_start" className={labelClass}>From table number</label>
+                <input id="bulk_start" type="number" min={1} value={bulk.start} onChange={(e) => setBulk({ ...bulk, start: Number(e.target.value) })} className={inputClass} placeholder="10" />
               </div>
               <div>
-                <label htmlFor="bulk_start" className={labelClass}>From</label>
-                <input id="bulk_start" type="number" min={1} value={bulk.start} onChange={(e) => setBulk({ ...bulk, start: Number(e.target.value) })} className={inputClass} />
+                <label htmlFor="bulk_end" className={labelClass}>To table number</label>
+                <input id="bulk_end" type="number" min={1} value={bulk.end} onChange={(e) => setBulk({ ...bulk, end: Number(e.target.value) })} className={inputClass} placeholder="20" />
               </div>
               <div>
-                <label htmlFor="bulk_end" className={labelClass}>To</label>
-                <input id="bulk_end" type="number" min={1} value={bulk.end} onChange={(e) => setBulk({ ...bulk, end: Number(e.target.value) })} className={inputClass} />
-              </div>
-              <div>
-                <label htmlFor="bulk_capacity" className={labelClass}>Seats</label>
-                <input id="bulk_capacity" type="number" min={1} value={bulk.capacity} onChange={(e) => setBulk({ ...bulk, capacity: Number(e.target.value) })} className={inputClass} />
+                <label htmlFor="bulk_capacity" className={labelClass}>Seats per table</label>
+                <input id="bulk_capacity" type="number" min={1} value={bulk.capacity} onChange={(e) => setBulk({ ...bulk, capacity: Number(e.target.value) })} className={inputClass} placeholder="10" />
               </div>
               <button type="submit" data-requires-auth disabled={busy} className={secondaryButtonClass}>
                 <Plus className="h-4 w-4" /> {busy ? "Adding…" : "Bulk Add"}
               </button>
             </form>
+            <p className="mt-2 text-xs text-ink/60">
+              Bulk add <span className="font-semibold text-charcoal">T-{String(bulk.start).padStart(2, "0")}</span> se <span className="font-semibold text-charcoal">T-{String(bulk.end).padStart(2, "0")}</span> tak, har table {bulk.capacity || 0} seats — total {Math.max(0, bulk.end - bulk.start + 1)} tables.
+            </p>
           </div>
           {formError && <p className="mt-3 text-sm text-red-600" role="alert">{formError}</p>}
           {bulkMsg && <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800" role="status">{bulkMsg}</p>}
