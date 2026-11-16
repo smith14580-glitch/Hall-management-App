@@ -256,7 +256,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="rounded-lg p-2 text-charcoal hover:bg-offwhite lg:hidden"
+                  className="hidden rounded-lg p-2 text-charcoal hover:bg-offwhite sm:inline-flex lg:hidden"
                   aria-label={t("logout")}
                 >
                   <LogOut className="h-5 w-5" />

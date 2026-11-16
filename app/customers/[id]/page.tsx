@@ -93,7 +93,7 @@ export default function CustomerDetailPage() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
+        <div className="min-w-0 rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
           <h2 className="font-display text-lg font-bold text-charcoal">Profile</h2>
           <dl className="mt-4 space-y-3 text-sm">
             <div><dt className="text-ink/50">Phone</dt><dd className="font-semibold text-charcoal" dir="ltr">{customer.phone}</dd></div>
@@ -104,7 +104,7 @@ export default function CustomerDetailPage() {
           </dl>
         </div>
 
-        <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line lg:col-span-2">
+        <div className="min-w-0 rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line lg:col-span-2">
           <h2 className="font-display text-lg font-bold text-charcoal">Booking History</h2>
           {bookings.length === 0 ? (
             <EmptyState message="Is customer ki koi booking nahi hai." />

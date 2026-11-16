@@ -367,7 +367,7 @@ export default function BookingDetailPage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+        <div className="min-w-0 space-y-6 lg:col-span-2">
           {/* Booking summary */}
           <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
             <div className="flex flex-wrap gap-2">
@@ -675,7 +675,7 @@ export default function BookingDetailPage() {
           </div>
         </div>
 
-        <aside className="h-fit rounded-xl bg-charcoal p-6 text-white shadow-sm lg:sticky lg:top-24">
+        <aside className="h-fit min-w-0 rounded-xl bg-charcoal p-6 text-white shadow-sm lg:sticky lg:top-24">
           <h2 className="font-display text-lg font-bold">Payment Summary</h2>
           <dl className="mt-5 space-y-3 text-sm">
             {hasAddOns ? (

@@ -78,9 +78,9 @@ function paymentLine(b: Booking) {
 function RevenueChart({ points }: { points: RevenuePoint[] }) {
   const max = Math.max(...points.map((p) => p.revenue), 1);
   return (
-    <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-line">
+    <div className="min-w-0 rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-line">
       <h2 className="font-display text-lg font-bold text-charcoal">Revenue — last 6 months</h2>
-      <div className="mt-5 flex h-44 items-end gap-3" role="img" aria-label="Revenue bar chart">
+      <div className="mt-5 flex h-44 items-end gap-3 overflow-x-auto pb-1" role="img" aria-label="Revenue bar chart">
         {points.map((p) => (
           <div key={p.label} className="flex flex-1 flex-col items-center gap-2">
             <span className="text-[11px] font-semibold text-ink/60">{formatPKR(p.revenue)}</span>
@@ -400,7 +400,7 @@ export default function DashboardPage() {
           )}
 
           <div className="mt-6 grid gap-6 lg:grid-cols-5">
-            <div className="lg:col-span-3">
+            <div className="min-w-0 lg:col-span-3">
               <RevenueChart points={revenue} />
             </div>
             <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-line lg:col-span-2">

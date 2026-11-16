@@ -379,7 +379,7 @@ export default function QuotationsPage() {
         </form>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-line space-y-3">
               <h2 className="font-display text-lg font-bold text-charcoal">New Quotation</h2>
               <div>
@@ -438,11 +438,11 @@ export default function QuotationsPage() {
 
             <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-line">
               <h2 className="font-display text-lg font-bold text-charcoal">Live preview</h2>
-              <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap rounded-lg bg-offwhite p-3 text-xs text-charcoal">{preview}</pre>
+              <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-offwhite p-3 text-xs text-charcoal">{preview}</pre>
             </div>
           </div>
 
-          <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-line">
+          <div className="min-w-0 rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-line">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-display text-lg font-bold text-charcoal">Quotations</h2>
               <div className="flex flex-wrap gap-2">
