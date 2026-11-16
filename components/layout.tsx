@@ -241,7 +241,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <Menu className="h-6 w-6" />
           </button>
-          <p className="font-display text-base font-bold text-charcoal sm:text-lg lg:hidden">
+          <p className="hidden font-display text-base font-bold text-charcoal sm:block sm:text-lg lg:hidden">
             MARQUE <span className="text-gold">ONE</span>
           </p>
           <div className="ms-auto flex items-center gap-2 sm:gap-3">
