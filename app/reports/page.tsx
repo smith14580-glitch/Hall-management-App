@@ -154,6 +154,11 @@ function endOfMonth(month: string): string {
   return `${month}-${pad2(last)}`;
 }
 
+function daysInMonth(month: string): number {
+  const [y, m] = month.split("-").map(Number);
+  return new Date(y, m, 0).getDate();
+}
+
 function addMonths(month: string, delta: number): string {
   const [y, m] = month.split("-").map(Number);
   const d = new Date(y, m - 1 + delta, 1);
@@ -316,7 +321,11 @@ export default function ReportsPage() {
           })),
         });
       } else if (kind === "occupancy") {
-        const res = await fetchOccupancy(month);
+        const [res, monthBookings] = await Promise.all([
+          fetchOccupancy(month),
+          fetchReport("bookings", { date_from: `${month}-01`, date_to: endOfMonth(month) }),
+        ]);
+        setRows(normalizeBookings(monthBookings));
         setOccupancy({
           ...res,
           total_slots: num(res.total_slots),
@@ -638,6 +647,17 @@ export default function ReportsPage() {
     );
   };
 
+  const occupancySlots = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const b of rows) {
+      if (!b.event_date.startsWith(month)) continue;
+      const slots = map.get(b.event_date) ?? new Set<string>();
+      slots.add(b.slot);
+      map.set(b.event_date, slots);
+    }
+    return map;
+  }, [rows, month]);
+
   const isBookingReport = kind === "bookings" || kind === "revenue";
   const showAnchor = isBookingReport && (period === "daily" || period === "weekly");
   const showMonthPicker = isBookingReport
@@ -837,6 +857,37 @@ export default function ReportsPage() {
               </div>
               <div className="mt-6 rounded-xl bg-white p-4 text-sm text-ink/70 shadow-sm ring-1 ring-stone-line">
                 {monthLabel(occupancy.month || month)} mein total {num(occupancy.total_slots)} slots me se {num(occupancy.booked_slots)} booked hain.
+              </div>
+              <div className="mt-6 rounded-xl bg-white p-4 shadow-sm ring-1 ring-stone-line sm:p-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h2 className="font-display text-base font-bold text-charcoal">Slot heatmap</h2>
+                    <p className="text-xs text-ink/50">Har din ka day/night slot — khaali din jaldi pick karo.</p>
+                  </div>
+                  <div className="flex items-center gap-3 text-[10px] font-semibold text-ink/60">
+                    <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-gold" /> Day</span>
+                    <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-charcoal" /> Night</span>
+                    <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-stone-200" /> Free</span>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-7 gap-1.5 sm:gap-2">
+                  {Array.from({ length: daysInMonth(month) }, (_, i) => {
+                    const day = i + 1;
+                    const key = `${month}-${pad2(day)}`;
+                    const slots = occupancySlots.get(key);
+                    const dayBooked = slots?.has("day") ?? false;
+                    const nightBooked = slots?.has("night") ?? false;
+                    return (
+                      <div key={key} className="rounded-lg border border-stone-line bg-offwhite p-1.5 text-center" title={`${day} ${monthLabel(month)} — day ${dayBooked ? "booked" : "free"}, night ${nightBooked ? "booked" : "free"}`}>
+                        <span className="text-[10px] font-semibold text-ink/60">{day}</span>
+                        <div className="mt-1 flex justify-center gap-0.5">
+                          <span className={`h-2 w-2.5 rounded-sm ${dayBooked ? "bg-gold" : "bg-stone-200"}`} />
+                          <span className={`h-2 w-2.5 rounded-sm ${nightBooked ? "bg-charcoal" : "bg-stone-200"}`} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </>
           )}

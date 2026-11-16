@@ -8,6 +8,7 @@ import {
   CalendarDays,
   CalendarPlus,
   Clock,
+  MessageCircle,
   Plus,
   Search,
   Users,
@@ -19,6 +20,7 @@ import {
   fetchRevenue,
   fetchTodaysBookings,
   fetchUpcomingBookings,
+  normalizePhone,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useLanguage } from "@/lib/i18n";
@@ -104,6 +106,7 @@ export default function DashboardPage() {
   const [upcoming, setUpcoming] = useState<Booking[]>([]);
   const [today, setToday] = useState<Booking[]>([]);
   const [latest, setLatest] = useState<Booking[]>([]);
+  const [followUps, setFollowUps] = useState<Booking[]>([]);
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -128,6 +131,12 @@ export default function DashboardPage() {
       setUpcoming(u);
       setToday(td);
       setLatest([...all].sort((a, b) => (b.created_at || "").localeCompare(a.created_at || "")).slice(0, 5));
+      setFollowUps(
+        [...all]
+          .filter((b) => b.balance_amount > 0 && b.status !== "cancelled")
+          .sort((a, b) => a.event_date.localeCompare(b.event_date))
+          .slice(0, 5),
+      );
     } catch (err) {
       setError(err);
     } finally {
@@ -346,6 +355,49 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+
+          {followUps.length > 0 && (
+            <div className="mt-6 rounded-xl bg-white shadow-sm ring-1 ring-stone-line">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-line px-5 py-4">
+                <div>
+                  <h2 className="font-display text-lg font-bold text-charcoal">Payment follow-ups</h2>
+                  <p className="text-xs text-ink/50">Balance due bookings — event date ke qareeb, reminder bhejo.</p>
+                </div>
+                <Link href="/payments" className="text-sm font-semibold text-gold-dark hover:underline">
+                  {t("payments")} →
+                </Link>
+              </div>
+              <ul className="divide-y divide-stone-line">
+                {followUps.map((b) => {
+                  const phone = b.customer_phone ? normalizePhone(b.customer_phone) : "";
+                  const message = `Dear ${b.customer_name || "Client"}, reminder for your ${b.event_type} on ${formatDate(b.event_date)} at MARQUE ONE. Total: ${formatPKR(b.total_price)}, received: ${formatPKR(b.amount_paid)}, remaining: ${formatPKR(b.balance_amount)}. Please clear the balance before the event. — MARQUE ONE`;
+                  return (
+                    <li key={b.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/bookings/${b.id}`} className="text-sm font-semibold text-charcoal hover:text-gold-dark">
+                          {b.booking_code} · {b.customer_name || "—"}
+                        </Link>
+                        <p className="mt-0.5 text-xs text-ink/60">
+                          {formatDate(b.event_date)} · {b.slot} · balance{" "}
+                          <span className="font-semibold text-charcoal">{formatPKR(b.balance_amount)}</span>
+                        </p>
+                      </div>
+                      {phone ? (
+                        <a
+                          href={`https://wa.me/${phone}?text=${encodeURIComponent(message)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-gold px-3 py-1.5 text-xs font-semibold text-charcoal hover:bg-gold-dark hover:text-white"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" /> Remind
+                        </a>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
 
           <div className="mt-6 grid gap-6 lg:grid-cols-5">
             <div className="lg:col-span-3">

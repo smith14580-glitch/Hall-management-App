@@ -75,6 +75,17 @@ export default function CustomerDetailPage() {
       </button>
       <PageHeader title={customer.full_name} subtitle={`Phone: ${customer.phone}`} />
 
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {(summary?.total_bookings ?? bookings.length) >= 3 ? (
+          <Badge tone="gold">VIP Customer</Badge>
+        ) : (summary?.total_bookings ?? bookings.length) >= 2 ? (
+          <Badge tone="blue">Repeat Customer</Badge>
+        ) : null}
+        <span className="text-xs font-semibold text-ink/50">
+          {summary?.total_bookings ?? bookings.length} booking(s) with MARQUE ONE
+        </span>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Total Bookings" value={String(summary?.total_bookings ?? bookings.length)} />
         <StatCard label="Total Paid" value={formatPKR(summary?.total_paid ?? bookings.reduce((s, b) => s + b.amount_paid, 0))} />
