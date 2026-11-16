@@ -9,6 +9,16 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  async rewrites() {
+    return [{ source: "/dashboard", destination: "/" }];
+  },
+  async redirects() {
+    return [
+      { source: "/audit-logs", destination: "/", permanent: false },
+      { source: "/audit-logs/:path*", destination: "/", permanent: false },
+      { source: "/auditLog", destination: "/", permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;
