@@ -310,38 +310,6 @@ export default function SettingsPage() {
   }
 
   return (
-    <>
-      <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-6 shadow-sm">
-        <h2 className="font-display text-lg font-bold text-red-800">Danger zone</h2>
-        <p className="mt-1 text-sm text-red-700">
-          Sample/demo data clear karne ke liye. Real production data delete nahi hoga — sirf demo entries remove hongi.
-        </p>
-        {resetMsg && <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">{resetMsg}</p>}
-        {resetError && <p className="mt-3 rounded-lg bg-red-100 px-3 py-2 text-sm font-semibold text-red-800">{resetError}</p>}
-        <button type="button" onClick={() => setShowReset(true)} className={`${dangerButtonClass} mt-4`}>
-          Clear demo data
-        </button>
-      </div>
-
-      {showReset && (
-        <Modal title="Clear demo data" onClose={() => (resetBusy ? null : setShowReset(false))}>
-          <p className="text-sm text-ink/70">
-            Demo bookings, payments, expenses, attendance aur customers delete ho jayenge. Settings aur tables safe rahenge.
-          </p>
-          <div className="mt-5 flex justify-end gap-2">
-            <button type="button" onClick={() => setShowReset(false)} disabled={resetBusy} className={secondaryButtonClass}>
-              Cancel
-            </button>
-            <button type="button" data-requires-auth onClick={() => void onResetData()} disabled={resetBusy} className={dangerButtonClass}>
-              {resetBusy ? "Clearing…" : "Clear demo data"}
-            </button>
-          </div>
-        </Modal>
-      )}
-    </>
-  );
-
-  return (
     <div>
       <PageHeader
         title={t("settings")}
@@ -529,6 +497,34 @@ export default function SettingsPage() {
           </ul>
         </div>
       </div>
+
+      <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-6 shadow-sm">
+        <h2 className="font-display text-lg font-bold text-red-800">Danger zone</h2>
+        <p className="mt-1 text-sm text-red-700">
+          Sample/demo data clear karne ke liye. Real production data delete nahi hoga — sirf demo entries remove hongi.
+        </p>
+        {resetMsg && <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">{resetMsg}</p>}
+        {resetError && <p className="mt-3 rounded-lg bg-red-100 px-3 py-2 text-sm font-semibold text-red-800">{resetError}</p>}
+        <button type="button" onClick={() => setShowReset(true)} className={`${dangerButtonClass} mt-4`}>
+          Clear demo data
+        </button>
+      </div>
+
+      {showReset && (
+        <Modal title="Clear demo data" onClose={() => (resetBusy ? null : setShowReset(false))}>
+          <p className="text-sm text-ink/70">
+            Demo bookings, payments, expenses, attendance aur customers delete ho jayenge. Settings aur tables safe rahenge.
+          </p>
+          <div className="mt-5 flex justify-end gap-2">
+            <button type="button" onClick={() => setShowReset(false)} disabled={resetBusy} className={secondaryButtonClass}>
+              Cancel
+            </button>
+            <button type="button" data-requires-auth onClick={() => void onResetData()} disabled={resetBusy} className={dangerButtonClass}>
+              {resetBusy ? "Clearing…" : "Clear demo data"}
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
