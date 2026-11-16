@@ -157,7 +157,8 @@ export default function TablesPage() {
     }
     setBusy(true);
     try {
-      await createTable({ table_number: number.trim(), capacity });
+      const created = await createTable({ table_number: number.trim(), capacity });
+      setRows((prev) => (prev.some((row) => row.id === created.id) ? prev : [...prev, created]));
       setNumber("");
       setCapacity(10);
       await load();
@@ -206,22 +207,36 @@ export default function TablesPage() {
     }
     setBusy(true);
     let added = 0;
+    let failed = 0;
+    const createdRows: HallTable[] = [];
     try {
       for (const tableNumber of pending) {
-        await createTable({ table_number: tableNumber, capacity: bulk.capacity });
-        added += 1;
+        try {
+          const created = await createTable({ table_number: tableNumber, capacity: bulk.capacity });
+          createdRows.push(created);
+          added += 1;
+        } catch (err) {
+          const duplicate =
+            err instanceof ApiError &&
+            (err.status === 409 || /exist|duplicate|already/i.test(err.message));
+          if (duplicate) {
+            skipped += 1;
+          } else {
+            failed += 1;
+          }
+        }
+      }
+      if (createdRows.length > 0) {
+        setRows((prev) => {
+          const ids = new Set(prev.map((row) => row.id));
+          return [...prev, ...createdRows.filter((row) => !ids.has(row.id))];
+        });
       }
       setBulkMsg(
-        `${added} table(s) add ho gaye${skipped ? `, ${skipped} skipped (already exist)` : ""}.`,
+        `${added} table(s) add ho gaye${skipped ? `, ${skipped} skipped (already exist)` : ""}${failed ? `, ${failed} fail` : ""}.`,
       );
       await load();
       await loadBoard();
-      await loadUtilization();
-    } catch (err) {
-      setBulkMsg(
-        `${added} table(s) add hue; baqi fail: ${err instanceof ApiError ? err.message : "unknown error"}`,
-      );
-      await load();
       await loadUtilization();
     } finally {
       setBusy(false);
@@ -275,7 +290,9 @@ export default function TablesPage() {
     setDeleteBusy(true);
     setDeleteError("");
     try {
-      await deleteTable(deleteTarget.id, deleteForce);
+      const deletedId = deleteTarget.id;
+      await deleteTable(deletedId, deleteForce);
+      setRows((prev) => prev.filter((row) => row.id !== deletedId));
       setDeleteTarget(null);
       setDeleteForce(false);
       await load();

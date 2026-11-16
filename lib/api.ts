@@ -187,6 +187,7 @@ export async function apiFetch<T>(
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      cache: "no-store",
     });
   } catch {
     throw new ApiError(
@@ -205,6 +206,7 @@ export async function apiFetch<T>(
           method,
           headers: retryHeaders,
           body: body !== undefined ? JSON.stringify(body) : undefined,
+          cache: "no-store",
         });
       } catch {
         throw new ApiError(0, "CONNECTION_ERROR", "Backend se connect nahi ho raha — dobara try karo.");
