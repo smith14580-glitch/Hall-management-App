@@ -76,7 +76,7 @@ function requireLogin(): void {
   throw new ApiError(
     401,
     "LOGIN_REQUIRED",
-    "Ye action ke liye login zaroori hai — pehle login karein. / Login is required for this action.",
+    "Login is required for this action.",
   );
 }
 
@@ -193,7 +193,7 @@ export async function apiFetch<T>(
     throw new ApiError(
       0,
       "CONNECTION_ERROR",
-      `Backend se connect nahi ho raha — ${API_URL} check karo. Backend (FastAPI) chal raha hai? NEXT_PUBLIC_API_URL sahi hai?`,
+      `Cannot reach the backend at ${API_URL}. Is the FastAPI backend running? Is NEXT_PUBLIC_API_URL set correctly?`,
     );
   }
 
@@ -209,12 +209,12 @@ export async function apiFetch<T>(
           cache: "no-store",
         });
       } catch {
-        throw new ApiError(0, "CONNECTION_ERROR", "Backend se connect nahi ho raha — dobara try karo.");
+        throw new ApiError(0, "CONNECTION_ERROR", "Cannot reach the backend. Please try again.");
       }
     }
     if (res.status === 401) {
       clearSession();
-      throw new ApiError(401, "UNAUTHORIZED", "Session khatam ho gaya hai — dobara login karo.");
+      throw new ApiError(401, "UNAUTHORIZED", "Your session has ended. Please log in again.");
     }
   }
 
@@ -271,7 +271,7 @@ export async function login(phone: string, password: string): Promise<LoginRespo
     throw new ApiError(
       401,
       "INVALID_CREDENTIALS",
-      "Demo mode ON hai — demo login: phone 03000000000, password demo1234 / Demo mode is ON — demo login: phone 03000000000, password demo1234",
+      "Demo mode is ON — demo login: phone 03000000000, password demo1234",
     );
   }
   return apiFetch<LoginResponse>("/auth/login", {
@@ -354,7 +354,7 @@ export async function fetchBookings(filters: BookingFilters = {}): Promise<Booki
 export async function fetchBooking(id: string): Promise<Booking> {
   if (demoActive()) {
     const b = SAMPLE_BOOKINGS.find((x) => x.id === id || x.booking_code === id);
-    if (!b) throw new ApiError(404, "NOT_FOUND", "Booking nahi mili.");
+    if (!b) throw new ApiError(404, "NOT_FOUND", "Booking not found.");
     return sample(b);
   }
   return apiFetch<Booking>(`/bookings/${id}`);
@@ -490,7 +490,7 @@ export async function fetchCustomers(search = ""): Promise<Customer[]> {
 export async function fetchCustomer(id: string): Promise<Customer> {
   if (demoActive()) {
     const c = SAMPLE_CUSTOMERS.find((x) => x.id === id);
-    if (!c) throw new ApiError(404, "NOT_FOUND", "Customer nahi mila.");
+    if (!c) throw new ApiError(404, "NOT_FOUND", "Customer not found.");
     return sample(c);
   }
   return apiFetch<Customer>(`/customers/${id}`);
@@ -572,7 +572,7 @@ export async function voidPayment(paymentId: string, reason: string): Promise<Pa
   requireLogin();
   if (demoActive()) {
     const p = SAMPLE_PAYMENTS.find((x) => x.id === paymentId);
-    if (!p) throw new ApiError(404, "NOT_FOUND", "Payment nahi mili.");
+    if (!p) throw new ApiError(404, "NOT_FOUND", "Payment not found.");
     return sample({ ...p, is_voided: true, void_reason: reason });
   }
   return apiFetch<Payment>(`/payments/${paymentId}/void`, { method: "POST", body: { reason } });
@@ -799,7 +799,7 @@ export async function updateTable(id: string, body: Record<string, unknown>): Pr
   requireLogin();
   if (demoActive()) {
     const t = SAMPLE_TABLES.find((x) => x.id === id);
-    if (!t) throw new ApiError(404, "NOT_FOUND", "Table nahi mili.");
+    if (!t) throw new ApiError(404, "NOT_FOUND", "Table not found.");
     Object.assign(t, body);
     return sample({ ...t } as HallTable);
   }
@@ -810,7 +810,7 @@ export async function activateTable(id: string): Promise<HallTable> {
   requireLogin();
   if (demoActive()) {
     const t = SAMPLE_TABLES.find((x) => x.id === id);
-    if (!t) throw new ApiError(404, "NOT_FOUND", "Table nahi mili.");
+    if (!t) throw new ApiError(404, "NOT_FOUND", "Table not found.");
     t.is_active = true;
     return sample({ ...t } as HallTable);
   }
@@ -873,7 +873,7 @@ export async function updateEmployee(id: string, body: Record<string, unknown>):
   requireLogin();
   if (demoActive()) {
     const e = SAMPLE_EMPLOYEES.find((x) => x.id === id);
-    if (!e) throw new ApiError(404, "NOT_FOUND", "Employee nahi mila.");
+    if (!e) throw new ApiError(404, "NOT_FOUND", "Employee not found.");
     return sample({ ...e, ...body } as Employee);
   }
   return apiFetch<Employee>(`/employees/${id}`, { method: "PATCH", body });

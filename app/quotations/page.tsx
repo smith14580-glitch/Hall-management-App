@@ -213,12 +213,12 @@ export default function QuotationsPage() {
   const onSend = async () => {
     setFormError("");
     if (clientName.trim().length < 2) {
-      setFormError("Client ka naam likho.");
+      setFormError("Enter the client's name.");
       return;
     }
     const normalized = normalizePhone(clientPhone);
     if (normalized.length < 12) {
-      setFormError("Phone number sahi format me ho (03xx-xxxxxxx).");
+      setFormError("Enter a valid phone number (03xx-xxxxxxx).");
       return;
     }
     setBusy(true);
@@ -237,14 +237,14 @@ export default function QuotationsPage() {
         window.open(q.whatsapp_url, "_blank", "noopener,noreferrer");
       }
       await markQuotationSent(q.id).catch(() => undefined);
-      toast.success(`${q.enquiry_no} — quotation ready, WhatsApp khul raha hai.`);
+      toast.success(`${q.enquiry_no} — quotation ready. Opening WhatsApp.`);
       setClientName("");
       setClientPhone("");
       setGuestCount("");
       setEventDate("");
       await reloadList();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Quotation nahi bana.");
+      setFormError(err instanceof ApiError ? err.message : "Quotation could not be created.");
     } finally {
       setBusy(false);
     }
@@ -268,10 +268,10 @@ export default function QuotationsPage() {
         validity_days: tplValidity,
       });
       setTemplate(updated);
-      setTplMsg("Template save ho gaya.");
-      toast.success("Message template save ho gaya.");
+      setTplMsg("Template saved.");
+      toast.success("Message template saved.");
     } catch (err) {
-      setTplErr(err instanceof ApiError ? err.message : "Template save nahi hua.");
+      setTplErr(err instanceof ApiError ? err.message : "Template could not be saved.");
     } finally {
       setTplBusy(false);
     }
@@ -290,7 +290,7 @@ export default function QuotationsPage() {
     <div>
       <PageHeader
         title="WhatsApp Quotations"
-        subtitle="Client ka number daalo, quotation preview dekho, aur ek click par WhatsApp khul jaye."
+        subtitle="Enter the client's number, preview the quotation, and open WhatsApp with one click."
         actions={
           <div className="flex gap-2">
             <button
@@ -366,7 +366,7 @@ export default function QuotationsPage() {
               </div>
               {!tplManagerName || !tplOffice || !tplLocation ? (
                 <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                  Settings me manager contact, office timings ya location link blank hai — template me placeholder khali rahega. Inhe yahan bharein.
+                  The manager contact, office timings, or location link is blank in Settings — the corresponding placeholders will remain empty in the template. Complete them here.
                 </p>
               ) : null}
             </div>

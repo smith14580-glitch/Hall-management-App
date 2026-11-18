@@ -92,7 +92,7 @@ export default function CalendarPage() {
     <div>
       <PageHeader
         title={t("calendar")}
-        subtitle="Day aur Night alag slots hain — ek hi date par dono book ho sakte hain."
+        subtitle="Day and Night are separate slots — both can be booked on the same date."
         actions={
           <Link href="/bookings/new" data-requires-auth className={goldButtonClass}>
             <Plus className="h-4 w-4" /> {t("newBooking")}
@@ -173,7 +173,7 @@ export default function CalendarPage() {
               })}
             </div>
             <p className="mt-3 text-xs text-ink/50">
-              D = Day slot ({getValue("slot_day_start")}–{getValue("slot_day_end")}) · N = Night slot ({getValue("slot_night_start")}–{getValue("slot_night_end")}). Settings me change ho sakte hain.
+              D = Day slot ({getValue("slot_day_start")}–{getValue("slot_day_end")}) · N = Night slot ({getValue("slot_night_start")}–{getValue("slot_night_end")}). Times can be changed in Settings.
             </p>
           </div>
 
@@ -182,7 +182,7 @@ export default function CalendarPage() {
               {selected ? formatDate(selected) : "Select a date"}
             </h2>
             {!selected ? (
-              <p className="mt-3 text-sm text-ink/60">Calendar me kisi date par click karo — us din ki bookings aur slot status yahan dikhega.</p>
+              <p className="mt-3 text-sm text-ink/60">Select a date in the calendar to view that day&apos;s bookings and slot status.</p>
             ) : dayLoading ? (
               <LoadingState />
             ) : (
@@ -197,7 +197,7 @@ export default function CalendarPage() {
                   ) : null;
                 })()}
                 {dayBookings.length === 0 ? (
-                  <p className="mt-4 text-sm text-ink/60">Is date par koi booking nahi hai.</p>
+                  <p className="mt-4 text-sm text-ink/60">There are no bookings on this date.</p>
                 ) : (
                   <ul className="mt-4 space-y-3">
                     {dayBookings.map((b) => (
@@ -216,7 +216,7 @@ export default function CalendarPage() {
                   </ul>
                 )}
                 <Link href={`/bookings/new?date=${selected}`} data-requires-auth className={`${goldButtonClass} mt-4 w-full`}>
-                  <Plus className="h-4 w-4" /> Is Date Par Booking Karein
+                  <Plus className="h-4 w-4" /> Book This Date
                 </Link>
               </>
             )}

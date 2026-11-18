@@ -20,15 +20,15 @@ import {
 } from "@/components/ui";
 
 const EDITABLE: Array<{ key: string; label: string; hint: string; type?: string }> = [
-  { key: "hall_day_price", label: "Day Price (PKR)", hint: "Nayi bookings par lagega. Purani bookings ki price snapshot safe rehti hai." },
-  { key: "hall_night_price", label: "Night Price (PKR)", hint: "Nayi bookings par lagega. Purani bookings ki price snapshot safe rehti hai." },
-  { key: "default_advance_percent", label: "Default Advance (%)", hint: "Default 0–100%. Per booking badal sakte hain." },
-  { key: "duty_start_time", label: "Duty Start Time", hint: "Attendance late calculation isi se hogi.", type: "time" },
-  { key: "late_grace_minutes", label: "Late Grace (minutes)", hint: "Is minutes ke baad late count hoga." },
-  { key: "slot_day_start", label: "Day Slot Start", hint: "Day slot ka start time.", type: "time" },
-  { key: "slot_day_end", label: "Day Slot End", hint: "Day slot ka end time.", type: "time" },
-  { key: "slot_night_start", label: "Night Slot Start", hint: "Night slot ka start time.", type: "time" },
-  { key: "slot_night_end", label: "Night Slot End", hint: "Night slot ka end time.", type: "time" },
+  { key: "hall_day_price", label: "Day Price (PKR)", hint: "Applies to new bookings. Existing bookings keep their saved price snapshot." },
+  { key: "hall_night_price", label: "Night Price (PKR)", hint: "Applies to new bookings. Existing bookings keep their saved price snapshot." },
+  { key: "default_advance_percent", label: "Default Advance (%)", hint: "Defaults to 0–100%. Can be overridden for individual bookings." },
+  { key: "duty_start_time", label: "Duty Start Time", hint: "Used as the starting point for attendance late calculations.", type: "time" },
+  { key: "late_grace_minutes", label: "Late Grace (minutes)", hint: "Arrivals after this grace period are counted as late." },
+  { key: "slot_day_start", label: "Day Slot Start", hint: "Start time for the day slot.", type: "time" },
+  { key: "slot_day_end", label: "Day Slot End", hint: "End time for the day slot.", type: "time" },
+  { key: "slot_night_start", label: "Night Slot Start", hint: "Start time for the night slot.", type: "time" },
+  { key: "slot_night_end", label: "Night Slot End", hint: "End time for the night slot.", type: "time" },
 ];
 
 const ADDON_EDITABLE: Array<{ key: string; labelKey: string; hint: string }> = [
@@ -41,9 +41,9 @@ const ADDON_EDITABLE: Array<{ key: string; labelKey: string; hint: string }> = [
 ];
 
 const BUSINESS_EDITABLE: Array<{ key: string; labelKey: string; hint: string; placeholder: string }> = [
-  { key: "business_address", labelKey: "businessAddress", hint: "Invoice header par dikhega.", placeholder: "e.g. Main Boulevard, Lahore" },
-  { key: "business_phone", labelKey: "businessPhone", hint: "Invoice header par dikhega.", placeholder: "e.g. 042-1234567" },
-  { key: "business_phone_2", labelKey: "businessPhone2", hint: "Doosra number (optional).", placeholder: "e.g. 0300-1234567" },
+  { key: "business_address", labelKey: "businessAddress", hint: "Displayed in the invoice header.", placeholder: "e.g. Main Boulevard, Lahore" },
+  { key: "business_phone", labelKey: "businessPhone", hint: "Displayed in the invoice header.", placeholder: "e.g. 042-1234567" },
+  { key: "business_phone_2", labelKey: "businessPhone2", hint: "Secondary number (optional).", placeholder: "e.g. 0300-1234567" },
 ];
 
 const ALL_EDITABLE = [...EDITABLE, ...ADDON_EDITABLE, ...BUSINESS_EDITABLE];
@@ -108,7 +108,7 @@ export default function SettingsPage() {
       await refresh();
       await loadHall();
     } catch (err) {
-      setResetError(err instanceof ApiError ? err.message : "Data reset nahi ho saka.");
+      setResetError(err instanceof ApiError ? err.message : "Data could not be reset.");
     } finally {
       setResetBusy(false);
       setShowReset(false);
@@ -174,12 +174,12 @@ export default function SettingsPage() {
     const advance = Number(values.default_advance_percent);
     const grace = Number(values.late_grace_minutes);
 
-    if (!Number.isFinite(dayPrice) || dayPrice <= 0) errs.hall_day_price = "Day price 0 se zyada hona chahiye.";
-    if (!Number.isFinite(nightPrice) || nightPrice <= 0) errs.hall_night_price = "Night price 0 se zyada hona chahiye.";
+    if (!Number.isFinite(dayPrice) || dayPrice <= 0) errs.hall_day_price = "Day price must be greater than 0.";
+    if (!Number.isFinite(nightPrice) || nightPrice <= 0) errs.hall_night_price = "Night price must be greater than 0.";
     if (String(values.default_advance_percent ?? "") === "") {
-      errs.default_advance_percent = "Advance % zaroori hai.";
+      errs.default_advance_percent = "Advance % is required.";
     } else if (!Number.isFinite(advance) || advance < 0 || advance > 100) {
-      errs.default_advance_percent = "Advance 0 se 100 ke darmiyan hona chahiye.";
+      errs.default_advance_percent = "Advance must be between 0 and 100.";
     }
 
     const duty = values.duty_start_time;
@@ -187,30 +187,30 @@ export default function SettingsPage() {
     const de = values.slot_day_end;
     const ns = values.slot_night_start;
     const ne = values.slot_night_end;
-    if (!duty) errs.duty_start_time = "Duty start time zaroori hai.";
-    if (!ds) errs.slot_day_start = "Day slot start zaroori hai.";
-    if (!de) errs.slot_day_end = "Day slot end zaroori hai.";
-    if (!ns) errs.slot_night_start = "Night slot start zaroori hai.";
-    if (!ne) errs.slot_night_end = "Night slot end zaroori hai.";
-    if (ds && de && toMinutes(de) <= toMinutes(ds)) errs.slot_day_end = "Day slot end, start se baad hona chahiye.";
-    if (ns && ne && toMinutes(ne) <= toMinutes(ns)) errs.slot_night_end = "Night slot end, start se baad hona chahiye.";
-    if (!Number.isFinite(grace) || grace < 0) errs.late_grace_minutes = "Late grace 0 ya zyada hona chahiye.";
+    if (!duty) errs.duty_start_time = "Duty start time is required.";
+    if (!ds) errs.slot_day_start = "Day slot start is required.";
+    if (!de) errs.slot_day_end = "Day slot end is required.";
+    if (!ns) errs.slot_night_start = "Night slot start is required.";
+    if (!ne) errs.slot_night_end = "Night slot end is required.";
+    if (ds && de && toMinutes(de) <= toMinutes(ds)) errs.slot_day_end = "Day slot end must be after the start time.";
+    if (ns && ne && toMinutes(ne) <= toMinutes(ns)) errs.slot_night_end = "Night slot end must be after the start time.";
+    if (!Number.isFinite(grace) || grace < 0) errs.late_grace_minutes = "Late grace must be 0 or greater.";
 
     ADDON_EDITABLE.forEach(({ key }) => {
       const raw = String(values[key] ?? "");
       const num = Number(raw);
       if (raw === "" || !Number.isFinite(num) || num < 0) {
-        errs[key] = "0 ya zyada hona chahiye.";
+        errs[key] = "Must be 0 or greater.";
       }
     });
 
     if (guestCap !== "") {
       const g = Number(guestCap);
-      if (!Number.isFinite(g) || g <= 0) errs.capacity_guests = "Max guests 0 se zyada hona chahiye.";
+      if (!Number.isFinite(g) || g <= 0) errs.capacity_guests = "Max guests must be greater than 0.";
     }
     if (tableCap !== "") {
       const tcap = Number(tableCap);
-      if (!Number.isFinite(tcap) || tcap <= 0) errs.capacity_tables = "Total tables 0 se zyada hona chahiye.";
+      if (!Number.isFinite(tcap) || tcap <= 0) errs.capacity_tables = "Total tables must be greater than 0.";
     }
     return errs;
   };
@@ -221,7 +221,7 @@ export default function SettingsPage() {
     const errs = validate();
     setFieldErrors(errs);
     if (Object.keys(errs).length > 0) {
-      setFormError("Kuch values galat hain — neeche errors dekhein.");
+      setFormError("Some values are invalid — see the errors below.");
       return;
     }
     setBusy(true);
@@ -279,13 +279,13 @@ export default function SettingsPage() {
       }
 
       await refresh({ syncRemote: true });
-      const detail = changedLabels.length ? ` ${changedLabels.join("; ")}.` : " Koi value change nahi hui.";
-      const successMsg = `Settings saved — nayi values har jagah apply ho gayi hain.${detail}`;
+      const detail = changedLabels.length ? ` ${changedLabels.join("; ")}.` : " No values were changed.";
+      const successMsg = `Settings saved — the new values have been applied everywhere.${detail}`;
       setMsg(successMsg);
-      toast.success("Settings saved — nayi values har jagah apply ho gayi hain.");
+      toast.success("Settings saved — the new values have been applied everywhere.");
     } catch (err) {
       await refresh().catch(() => undefined);
-      const message = err instanceof ApiError ? err.message : "Settings save nahi hui. Purani values wapas kar di gayi hain.";
+      const message = err instanceof ApiError ? err.message : "Settings could not be saved. The previous values have been restored.";
       setFormError(message);
       toast.error(message);
     } finally {
@@ -313,7 +313,7 @@ export default function SettingsPage() {
     <div>
       <PageHeader
         title={t("settings")}
-        subtitle="Hall pricing, advance, slot timings aur duty rules — sab yahan se badalte hain. Nayi values save ke baad foran apply hoti hain."
+        subtitle="Hall pricing, advance, slot timings, and duty rules are all managed here. New values take effect immediately after saving."
         actions={
           <button type="button" data-requires-auth onClick={saveAll} disabled={busy} className={goldButtonClass}>
             {busy ? "Saving…" : t("save")}
@@ -355,7 +355,7 @@ export default function SettingsPage() {
 
         <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
           <h2 className="font-display text-lg font-bold text-charcoal">{t("addonPrices")}</h2>
-          <p className="mt-1 text-sm text-ink/60">Refreshment aur hall type charges — nayi bookings par lagega.</p>
+          <p className="mt-1 text-sm text-ink/60">Refreshment and hall type charges — applied to new bookings.</p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {ADDON_EDITABLE.map((item) => (
               <div key={item.key}>
@@ -380,7 +380,7 @@ export default function SettingsPage() {
 
         <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
           <h2 className="font-display text-lg font-bold text-charcoal">{t("businessDetails")}</h2>
-          <p className="mt-1 text-sm text-ink/60">Ye details invoice header par dikhti hain.</p>
+          <p className="mt-1 text-sm text-ink/60">These details appear in the invoice header.</p>
           <div className="mt-4 space-y-4">
             {BUSINESS_EDITABLE.map((item) => (
               <div key={item.key}>
@@ -402,7 +402,7 @@ export default function SettingsPage() {
         <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
           <h2 className="font-display text-lg font-bold text-charcoal">Hall Capacity</h2>
           <p className="mt-1 text-sm text-ink/60">
-            Capacity yahan se set hoti hai — booking/capacity checks current values use karenge.
+            Capacity is set here — booking and capacity checks use the current values.
           </p>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
@@ -501,7 +501,7 @@ export default function SettingsPage() {
       <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-6 shadow-sm">
         <h2 className="font-display text-lg font-bold text-red-800">Danger zone</h2>
         <p className="mt-1 text-sm text-red-700">
-          Sample/demo data clear karne ke liye. Real production data delete nahi hoga — sirf demo entries remove hongi.
+          Use this to clear sample/demo data. Real production data will not be deleted — only demo entries are removed.
         </p>
         {resetMsg && <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">{resetMsg}</p>}
         {resetError && <p className="mt-3 rounded-lg bg-red-100 px-3 py-2 text-sm font-semibold text-red-800">{resetError}</p>}
@@ -513,7 +513,7 @@ export default function SettingsPage() {
       {showReset && (
         <Modal title="Clear demo data" onClose={() => (resetBusy ? null : setShowReset(false))}>
           <p className="text-sm text-ink/70">
-            Demo bookings, payments, expenses, attendance aur customers delete ho jayenge. Settings aur tables safe rahenge.
+            Demo bookings, payments, expenses, attendance, and customers will be deleted. Settings and tables will remain unchanged.
           </p>
           <div className="mt-5 flex justify-end gap-2">
             <button type="button" onClick={() => setShowReset(false)} disabled={resetBusy} className={secondaryButtonClass}>

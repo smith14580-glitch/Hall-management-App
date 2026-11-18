@@ -121,11 +121,11 @@ export default function EmployeesPage() {
     e.preventDefault();
     setFormError("");
     if (fullName.trim().length < 2) {
-      setFormError("Poora naam likho.");
+      setFormError("Enter your full name.");
       return;
     }
     if (phone.trim().length < 10) {
-      setFormError("Phone number kam az kam 10 digits ka ho.");
+      setFormError("Phone number must be at least 10 digits.");
       return;
     }
     setBusy(true);
@@ -143,7 +143,7 @@ export default function EmployeesPage() {
       setShowForm(false);
       await load();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Employee add nahi hua.");
+      setFormError(err instanceof ApiError ? err.message : "Employee could not be added.");
     } finally {
       setBusy(false);
     }
@@ -160,7 +160,7 @@ export default function EmployeesPage() {
       setDeactivating(null);
       await load();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Deactivate nahi ho saka.");
+      setFormError(err instanceof ApiError ? err.message : "Could not deactivate the employee.");
       setDeactivating(null);
     }
   };
@@ -176,7 +176,7 @@ export default function EmployeesPage() {
       setDeleteForce(false);
       await load();
     } catch (err) {
-      setDeleteError(err instanceof ApiError ? err.message : "Employee delete nahi hua.");
+      setDeleteError(err instanceof ApiError ? err.message : "Employee could not be deleted.");
     } finally {
       setDeleteBusy(false);
     }
@@ -232,15 +232,15 @@ export default function EmployeesPage() {
     const base = Number(salBase);
     const paid = Number(salPaid || 0);
     if (!salMonth) {
-      setSalError("Month chuno.");
+      setSalError("Select a month.");
       return;
     }
     if (!Number.isFinite(base) || base < 0) {
-      setSalError("Base amount sahi likho.");
+      setSalError("Enter a valid base amount.");
       return;
     }
     if (!Number.isFinite(paid) || paid < 0) {
-      setSalError("Paid amount sahi likho.");
+      setSalError("Enter a valid paid amount.");
       return;
     }
     setSalBusy(true);
@@ -252,10 +252,10 @@ export default function EmployeesPage() {
         payment_date: salDate || undefined,
         notes: salNotes || undefined,
       });
-      setSalMsg("Salary record save ho gaya.");
+      setSalMsg("Salary record saved successfully.");
       await reloadSalary(salaryEmp);
     } catch (err) {
-      setSalError(err instanceof ApiError ? err.message : "Salary save nahi hui.");
+      setSalError(err instanceof ApiError ? err.message : "Salary could not be saved.");
     } finally {
       setSalBusy(false);
     }
@@ -275,7 +275,7 @@ export default function EmployeesPage() {
       } else {
         const base = Number(salaryEmp.monthly_salary || 0);
         if (!(base > 0)) {
-          setSalError("Is month ka base amount form me enter karke Save karo, phir Pay Now dabao.");
+          setSalError("Enter this month's base amount in the form and click Save, then click Pay Now.");
           selectMonth(salaryEmp, month);
           return;
         }
@@ -286,10 +286,10 @@ export default function EmployeesPage() {
           payment_date: todayISO(),
         });
       }
-      setSalMsg(`${month} — salary paid mark ho gayi.`);
+      setSalMsg(`${month} — salary marked as paid.`);
       await reloadSalary(salaryEmp);
     } catch (err) {
-      setSalError(err instanceof ApiError ? err.message : "Salary pay nahi ho saki.");
+      setSalError(err instanceof ApiError ? err.message : "Salary could not be paid.");
     }
   };
 
@@ -322,7 +322,7 @@ export default function EmployeesPage() {
     <div>
       <PageHeader
         title={t("employees")}
-        subtitle="Employees, printable ID cards (QR attendance), aur 12-month salary records."
+        subtitle="Employees, printable ID cards (QR attendance), and 12-month salary records."
         actions={
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => setShowCards(true)} className={secondaryButtonClass}>
@@ -341,7 +341,7 @@ export default function EmployeesPage() {
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Name ya employee code…"
+          placeholder="Name or employee code…"
           className={`${inputClass} ps-9`}
           aria-label={t("search")}
         />
@@ -356,7 +356,7 @@ export default function EmployeesPage() {
       ) : loading ? (
         <LoadingState />
       ) : rows.length === 0 ? (
-        <EmptyState message="No employees yet — Add Employee se pehla employee banao." />
+        <EmptyState message="No employees yet — use Add Employee to create the first one." />
       ) : (
         <div className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-stone-line">
           <table className="w-full min-w-200 text-left text-sm">
@@ -436,12 +436,12 @@ export default function EmployeesPage() {
             </div>
             <div>
               <label htmlFor="emp_password" className={labelClass}>Login Password (optional)</label>
-              <input id="emp_password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 8 chars — login ke liye" className={inputClass} />
-              <p className="mt-1 text-xs text-ink/50">Password do toh employee is phone + password se login kar sakta hai (role staff/waiter). Khali chhodo toh sirf employee record banega.</p>
+              <input id="emp_password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 8 chars — for login" className={inputClass} />
+              <p className="mt-1 text-xs text-ink/50">If a password is provided, the employee can log in with this phone number and password (staff/waiter role). Leave it blank to create only the employee record.</p>
             </div>
             <p className="text-xs text-ink/60">
-              Employee code (EMP-0001…) backend khud banata hai. Ye hi unique attendance ID hai
-              jiska QR ID card par hota hai — scan se attendance lagti hai.
+              The employee code (EMP-0001…) is generated automatically by the backend. This is the
+              unique attendance ID included in the QR code on the ID card — scanning it records attendance.
             </p>
             {formError && <p className="text-sm text-red-600" role="alert">{formError}</p>}
             <div className="flex gap-2">
@@ -484,7 +484,7 @@ export default function EmployeesPage() {
             <button type="button" onClick={() => setShowCards(false)} className={secondaryButtonClass}>
               {t("close")}
             </button>
-            <p className="text-xs text-ink/50">Tip: ID card scan karke Attendance page par check-in/out lagta hai.</p>
+            <p className="text-xs text-ink/50">Tip: Scan the ID card on the Attendance page to record check-in/check-out.</p>
           </div>
         </Modal>
       )}
@@ -628,7 +628,7 @@ export default function EmployeesPage() {
       {deactivating && (
         <Modal title="Deactivate Employee" onClose={() => setDeactivating(null)}>
           <p className="text-sm text-ink/70">
-            <strong>{deactivating.full_name}</strong> ({deactivating.employee_code}) ko deactivate karna hai? Unka login bhi band ho jayega.
+            <strong>{deactivating.full_name}</strong> ({deactivating.employee_code}) — deactivate this employee? Their login will also be disabled.
           </p>
           <div className="mt-4 flex gap-2">
             <button type="button" onClick={() => void confirmDeactivate()} className="inline-flex min-h-10 items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">
@@ -642,7 +642,7 @@ export default function EmployeesPage() {
       {deleteTarget && (
         <Modal title="Delete Employee" onClose={() => (deleteBusy ? null : setDeleteTarget(null))}>
           <p className="text-sm text-ink/70">
-            <strong>{deleteTarget.full_name}</strong> ({deleteTarget.employee_code}) permanently delete karna hai?
+            <strong>{deleteTarget.full_name}</strong> ({deleteTarget.employee_code}) — permanently delete this employee?
           </p>
           <label className="mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
             <input
@@ -651,7 +651,7 @@ export default function EmployeesPage() {
               onChange={(e) => setDeleteForce(e.target.checked)}
               className="mt-0.5 h-4 w-4"
             />
-            <span>Force delete: attendance aur salary records bhi delete ho jayenge. Sirf tab use karo jab employee permanently hata rahe ho.</span>
+            <span>Force delete: attendance and salary records will also be deleted. Only use this when permanently removing the employee.</span>
           </label>
           {deleteError && <p className="mt-3 text-sm text-red-600" role="alert">{deleteError}</p>}
           <div className="mt-5 flex justify-end gap-2">

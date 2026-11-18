@@ -22,17 +22,17 @@ import {
 } from "@/components/ui";
 
 const schema = z.object({
-  customer_name: z.string().min(2, "Customer ka poora naam likho."),
-  phone: z.string().min(10, "Phone number kam az kam 10 digits ka ho."),
-  address: z.string().min(3, "Address likho."),
-  email: z.string().email("Sahi email likho.").optional().or(z.literal("")),
-  event_type: z.string().min(1, "Event type chuno."),
-  event_date: z.string().min(1, "Date chuno."),
+  customer_name: z.string().min(2, "Enter the customer's full name."),
+  phone: z.string().min(10, "Phone number must contain at least 10 digits."),
+  address: z.string().min(3, "Enter an address."),
+  email: z.string().email("Enter a valid email address.").optional().or(z.literal("")),
+  event_type: z.string().min(1, "Select an event type."),
+  event_date: z.string().min(1, "Select a date."),
   slot: z.enum(["day", "night"]),
-  guest_count: z.coerce.number().int().min(1, "Guests kam az kam 1 hon."),
-  tables_required: z.coerce.number().int().min(1, "Tables kam az kam 1 hon."),
+  guest_count: z.coerce.number().int().min(1, "At least 1 guest is required."),
+  tables_required: z.coerce.number().int().min(1, "At least 1 table is required."),
   special_instructions: z.string().optional(),
-  advance_amount: z.coerce.number().min(0, "Advance 0 ya zyada ho."),
+  advance_amount: z.coerce.number().min(0, "Advance must be 0 or greater."),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -119,7 +119,7 @@ export default function NewBookingPage() {
         setConflict(
           res.available
             ? null
-            : `Ye date aur slot pehle se booked hai${res.conflicting_booking_code ? ` (${res.conflicting_booking_code})` : ""}. Doosri date ya slot chuno.`,
+            : `This date and slot are already booked${res.conflicting_booking_code ? ` (${res.conflicting_booking_code})` : ""}. Select a different date or slot.`,
         );
       } catch {
         if (!cancelled) setConflict(null);
@@ -171,7 +171,7 @@ export default function NewBookingPage() {
       return;
     }
     if (values.event_date < todayISO()) {
-      setSubmitError("Past date par booking nahi ho sakti — aaj ya aane wali date chuno.");
+      setSubmitError("Bookings cannot be made for a past date — select today or a future date.");
       return;
     }
     try {
@@ -203,11 +203,11 @@ export default function NewBookingPage() {
       router.push(`/bookings/${created.id}`);
     } catch (err) {
       if (err instanceof ApiError && err.code === "BOOKING_CONFLICT") {
-        setSubmitError("Ye date aur slot pehle se booked hai. Doosri date ya slot chuno.");
+        setSubmitError("This date and slot are already booked. Select a different date or slot.");
       } else if (err instanceof ApiError) {
         setSubmitError(err.message);
       } else {
-        setSubmitError("Booking save nahi hui — dobara try karo.");
+        setSubmitError("The booking could not be saved. Please try again.");
       }
     }
   };
@@ -217,14 +217,14 @@ export default function NewBookingPage() {
     return (
       <div>
         <PageHeader title={t("newBooking")} />
-        <ConnectionError error={loadError || new Error("Pricing load nahi hui.")} onRetry={() => window.location.reload()} />
+        <ConnectionError error={loadError || new Error("Pricing could not be loaded.")} onRetry={() => window.location.reload()} />
       </div>
     );
   }
 
   return (
     <div>
-      <PageHeader title={t("newBooking")} subtitle="Customer, event aur price — sab ek form me. Price Settings se khud calculate hota hai." />
+      <PageHeader title={t("newBooking")} subtitle="Customer, event, and pricing details in one form. Pricing is calculated automatically from Settings." />
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-5 rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line lg:col-span-2">
@@ -232,7 +232,7 @@ export default function NewBookingPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="customer_name" className={labelClass}>Full Name *</label>
-              <input id="customer_name" className={inputClass} placeholder="Customer name likhein" {...register("customer_name")} />
+              <input id="customer_name" className={inputClass} placeholder="Customer name" {...register("customer_name")} />
               {errors.customer_name && <p className="mt-1 text-xs text-red-600">{errors.customer_name.message}</p>}
             </div>
             <div>
@@ -392,7 +392,7 @@ export default function NewBookingPage() {
             <textarea id="special_instructions" rows={3} className={inputClass} placeholder="Stage, food, decoration…" {...register("special_instructions")} />
           </div>
 
-          {checking && <p className="text-sm text-ink/60">Availability check ho rahi hai…</p>}
+          {checking && <p className="text-sm text-ink/60">Checking availability…</p>}
           {conflict && (
             <p className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700" role="alert">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {conflict}
@@ -468,7 +468,7 @@ export default function NewBookingPage() {
           </dl>
           <p className="mt-5 text-xs leading-relaxed text-white/50">
             Day price {formatPKR(getNumber("hall_day_price"))} · Night price {formatPKR(getNumber("hall_night_price"))}.
-            Price booking time par snapshot hota hai; baad me price badle to is booking par asar nahi hoga.
+            Prices are locked in when the booking is created; later price changes do not affect this booking.
           </p>
         </aside>
       </form>

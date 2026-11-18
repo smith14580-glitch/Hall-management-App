@@ -122,13 +122,13 @@ export default function AttendancePage() {
     setBusy(true);
     try {
       const row = await checkIn();
-      setActionMsg(`Check-in ho gaya — ${formatTime(row.check_in_at)}${row.is_late ? " (Late)" : ""}`);
+      setActionMsg(`Check-in recorded at ${formatTime(row.check_in_at)}${row.is_late ? " (Late)" : ""}`);
       await load();
     } catch (err) {
       if (err instanceof ApiError && err.code === "DUPLICATE_CHECKIN") {
-        setActionError("Aaj ka check-in pehle hi ho chuka hai — dobara check-in nahi ho sakta. / Already checked in today.");
+        setActionError("You have already checked in today. A second check-in is not permitted.");
       } else {
-        setActionError(err instanceof ApiError ? err.message : "Check-in nahi ho saka.");
+        setActionError(err instanceof ApiError ? err.message : "Check-in could not be recorded.");
       }
     } finally {
       setBusy(false);
@@ -141,13 +141,13 @@ export default function AttendancePage() {
     setBusy(true);
     try {
       const row = await checkOut();
-      setActionMsg(`Check-out ho gaya — working time ${formatWorkingMinutes(row.working_minutes)}.`);
+      setActionMsg(`Check-out recorded — working time ${formatWorkingMinutes(row.working_minutes)}.`);
       await load();
     } catch (err) {
       if (err instanceof ApiError && (err.code === "INVALID_CHECKOUT" || err.code === "ALREADY_CHECKED_OUT")) {
-        setActionError("Pehle check-in zaroori hai, ya aaj ka check-out pehle hi ho chuka hai. / Check-in required first, or already checked out today.");
+        setActionError("A check-in is required first, or you have already checked out today.");
       } else {
-        setActionError(err instanceof ApiError ? err.message : "Check-out nahi ho saka.");
+        setActionError(err instanceof ApiError ? err.message : "Check-out could not be recorded.");
       }
     } finally {
       setBusy(false);
@@ -159,10 +159,10 @@ export default function AttendancePage() {
     setActionError("");
     try {
       await markAttendance({ employee_id: markEmp, attendance_date: todayISO(), status: markStatus });
-      setActionMsg("Attendance mark kar di gayi.");
+      setActionMsg("Attendance recorded.");
       await load();
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : "Mark nahi ho saka.");
+      setActionError(err instanceof ApiError ? err.message : "Attendance could not be recorded.");
     }
   };
 
@@ -188,15 +188,15 @@ export default function AttendancePage() {
       const row = await scanAttendance(code.trim(), action);
       const label = row.employee_name || row.employee_id;
       const verb = row.check_out_at ? "check-out" : "check-in";
-      setScanMsg(`${label} — ${verb} ho gaya (${formatTime(row.check_out_at || row.check_in_at)}).`);
+      setScanMsg(`${label} — ${verb} recorded at ${formatTime(row.check_out_at || row.check_in_at)}.`);
       await load();
     } catch (err) {
       if (err instanceof ApiError && err.code === "DUPLICATE_CHECKIN") {
-        setScanErr("Aaj ka check-in pehle hi ho chuka hai.");
+        setScanErr("This employee has already checked in today.");
       } else if (err instanceof ApiError && (err.code === "INVALID_CHECKOUT" || err.code === "ALREADY_CHECKED_OUT")) {
-        setScanErr("Check-out nahi ho saka — pehle check-in zaroori hai ya aaj ka check-out ho chuka hai.");
+        setScanErr("Check-out could not be recorded — a check-in is required first, or the employee has already checked out today.");
       } else {
-        setScanErr(err instanceof ApiError ? err.message : "Scan fail ho gaya.");
+        setScanErr(err instanceof ApiError ? err.message : "The scan could not be processed.");
       }
     } finally {
       setScanBusy(false);
@@ -248,13 +248,13 @@ export default function AttendancePage() {
     } catch {
       scannerRef.current = null;
       setScanOpen(false);
-      setScanErr("Camera start nahi hui — permission check karo, ya employee code manually enter karo.");
+      setScanErr("The camera could not be started — check permissions, or enter the employee code manually.");
     }
   };
 
   const handleManual = async () => {
     if (!manualCode.trim()) {
-      setScanErr("Employee code likho (jaise EMP-0001).");
+      setScanErr("Enter an employee code (for example, EMP-0001).");
       return;
     }
     await handleScan(manualCode.trim(), manualAction);
@@ -268,7 +268,7 @@ export default function AttendancePage() {
     <div>
       <PageHeader
         title={t("attendance")}
-        subtitle={showManager ? "Aaj ki attendance, history aur monthly report." : "Apni aaj ki attendance yahan se mark karo."}
+        subtitle={showManager ? "Today's attendance, history, and monthly report." : "Record your attendance for today here."}
       />
 
       {error ? (
@@ -289,7 +289,7 @@ export default function AttendancePage() {
                 <div className="mt-4">
                   {checkedOut ? (
                     <p className="flex items-center justify-center gap-2 rounded-lg bg-emerald-500/20 px-4 py-3 font-semibold text-emerald-300">
-                      <CheckCircle2 className="h-5 w-5" /> Aaj ka kaam mukammal — check-out {formatTime(todayRow?.check_out_at)}
+                      <CheckCircle2 className="h-5 w-5" /> Shift complete — checked out at {formatTime(todayRow?.check_out_at)}
                     </p>
                   ) : checkedIn ? (
                     <p className="rounded-lg bg-emerald-500/20 px-4 py-3 font-semibold text-emerald-300">
@@ -297,7 +297,7 @@ export default function AttendancePage() {
                       {todayRow?.is_late ? ` · Late (${todayRow.late_minutes} min)` : ""}
                     </p>
                   ) : (
-                    <p className="rounded-lg bg-white/10 px-4 py-3 font-semibold text-white/80">Aaj abhi check-in nahi hua</p>
+                    <p className="rounded-lg bg-white/10 px-4 py-3 font-semibold text-white/80">You have not checked in yet today</p>
                   )}
                 </div>
               </div>
@@ -320,7 +320,7 @@ export default function AttendancePage() {
                   <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className={inputClass} style={{ width: "auto" }} aria-label="Month" />
                 </div>
                 {myRows.length === 0 ? (
-                  <EmptyState message="Is month ki koi attendance nahi hai." />
+                  <EmptyState message="No attendance records for this month." />
                 ) : (
                   <ul className="mt-4 space-y-2">
                     {myRows.map((r) => (
@@ -393,7 +393,7 @@ export default function AttendancePage() {
 
               <div className="mt-6 rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
                 <h2 className="font-display text-lg font-bold text-charcoal">Mark Attendance (Manager)</h2>
-                <p className="mt-1 text-sm text-ink/60">Jo staff check-in nahi kar saka, usko yahan se Present/Absent mark karo.</p>
+                <p className="mt-1 text-sm text-ink/60">Mark an employee Present or Absent here if they were unable to check in.</p>
                 <div className="mt-4 flex flex-wrap items-end gap-3">
                   <div>
                     <label htmlFor="mark_emp" className={labelClass}>Employee</label>
@@ -425,7 +425,7 @@ export default function AttendancePage() {
                   <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className={inputClass} style={{ width: "auto" }} aria-label="Month" />
                 </div>
                 {rows.length === 0 ? (
-                  <EmptyState message="Aaj ki koi attendance nahi hai." />
+                  <EmptyState message="No attendance records for today." />
                 ) : (
                   <div className="mt-4 overflow-x-auto">
                     <table className="w-full min-w-160 text-left text-sm">
@@ -485,7 +485,7 @@ export default function AttendancePage() {
                   </>
                 )}
                 <p className="mt-4 text-xs text-ink/50">
-                  Late rule: duty start {dutyStart}, {graceMinutes}-minute grace — late after {lateAfter}. Settings me change ho sakta hai.
+                  Late rule: duty starts at {dutyStart}, with a {graceMinutes}-minute grace period — marked late after {lateAfter}. This can be changed in Settings.
                 </p>
               </div>
 

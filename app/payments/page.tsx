@@ -52,7 +52,7 @@ export default function PaymentsPage() {
 
   return (
     <div>
-      <PageHeader title={t("payments")} subtitle="Har payment alag record hoti hai. Receipt dobara print ho sakti hai." />
+      <PageHeader title={t("payments")} subtitle="Each payment is recorded separately. Receipts can be printed again at any time." />
 
       {error ? (
         <ConnectionError error={error} onRetry={() => void load()} />
@@ -69,7 +69,7 @@ export default function PaymentsPage() {
           <div className="mt-6 rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line">
             <h2 className="font-display text-lg font-bold text-charcoal">Outstanding Balances</h2>
             {outstanding.length === 0 ? (
-              <EmptyState message="Koi outstanding balance nahi hai — sab clear hai." />
+              <EmptyState message="No outstanding balances — all accounts are clear." />
             ) : (
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full min-w-150 text-left text-sm">

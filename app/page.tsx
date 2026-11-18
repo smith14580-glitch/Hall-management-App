@@ -65,14 +65,14 @@ function shortDate(dateStr: string) {
 }
 
 function slotClock(slot: string) {
-  return slot === "day" ? "dopahar 12:00 bajay" : "raat 7:00 bajay";
+  return slot === "day" ? "12:00 PM" : "7:00 PM";
 }
 
 function paymentLine(b: Booking) {
   const balance = formatPKR(b.balance_amount);
-  if (b.payment_status === "fully_paid") return "Advance received, poori payment mil gayi hai";
-  if (b.payment_status === "partially_paid") return `Advance received, balance ${balance} event se pehle due hai`;
-  return `Advance abhi due hai — ${balance}`;
+  if (b.payment_status === "fully_paid") return "Advance received, payment complete";
+  if (b.payment_status === "partially_paid") return `Advance received, balance ${balance} due before the event`;
+  return `Advance pending — ${balance}`;
 }
 
 function RevenueChart({ points }: { points: RevenuePoint[] }) {
@@ -207,7 +207,7 @@ export default function DashboardPage() {
         title={t("dashboard")}
         subtitle={
           user
-            ? `Welcome back, ${user.full_name} — aaj ka kaam yahan se dekho.`
+            ? `Welcome back, ${user.full_name} — here is today's overview.`
             : t("demoViewBanner")
         }
         actions={
@@ -237,12 +237,12 @@ export default function DashboardPage() {
               <div className="absolute inset-0 bg-gradient-to-r from-charcoal/90 via-charcoal/45 to-transparent" aria-hidden />
               <div className="relative flex flex-col gap-3 p-6 sm:p-8 lg:p-10">
                 <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-gold">
-                  {heroIsToday ? "AAJ KA EVENT" : "AGLA EVENT"} · {heroBooking.slot === "day" ? "DAY" : "NIGHT"} SLOT
+                  {heroIsToday ? "TODAY'S EVENT" : "NEXT EVENT"} · {heroBooking.slot === "day" ? "DAY" : "NIGHT"} SLOT
                 </p>
                 <h2 className="max-w-3xl break-words font-display text-2xl font-bold leading-tight text-white sm:text-3xl lg:text-4xl">
                   {heroBooking.customer_name || "—"} — {heroBooking.event_type},{" "}
                   {heroIsToday
-                    ? `aaj ${slotClock(heroBooking.slot)}`
+                    ? `today at ${slotClock(heroBooking.slot)}`
                     : `${shortDate(heroBooking.event_date)}, ${slotClock(heroBooking.slot)}`}
                 </h2>
                 <p className="max-w-2xl text-sm text-white/80 sm:text-base">
@@ -250,7 +250,7 @@ export default function DashboardPage() {
                 </p>
                 {otherToday.length > 0 && (
                   <p className="text-xs font-semibold text-gold-light sm:text-sm">
-                    Aaj {todaySorted.length} events hain — {todaySorted.map((b) => (b.slot === "day" ? "Day 12:00" : "Night 7:00")).join(", ")}
+                    {todaySorted.length} event(s) today — {todaySorted.map((b) => (b.slot === "day" ? "Day 12:00" : "Night 7:00")).join(", ")}
                   </p>
                 )}
                 <span className="mt-1 inline-flex items-center gap-2 text-sm font-semibold text-gold">
@@ -260,7 +260,7 @@ export default function DashboardPage() {
             </Link>
           ) : (
             <div className="mb-6 rounded-xl border-s-4 border-gold bg-gold-light/70 px-4 py-3 text-sm font-semibold text-charcoal ring-1 ring-gold/30">
-              Koi upcoming event nahi hai — New Booking se pehli booking banayein.
+              No upcoming events — use New Booking to create the first one.
             </div>
           )}
 
@@ -361,7 +361,7 @@ export default function DashboardPage() {
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-line px-5 py-4">
                 <div>
                   <h2 className="font-display text-lg font-bold text-charcoal">Payment follow-ups</h2>
-                  <p className="text-xs text-ink/50">Balance due bookings — event date ke qareeb, reminder bhejo.</p>
+                  <p className="text-xs text-ink/50">Bookings with a balance due — send a reminder as the event date approaches.</p>
                 </div>
                 <Link href="/payments" className="text-sm font-semibold text-gold-dark hover:underline">
                   {t("payments")} →
@@ -505,7 +505,7 @@ export default function DashboardPage() {
             </div>
             {today.length > 0 && (
               <p className="border-t border-stone-line px-5 py-3 text-xs text-ink/60">
-                Aaj ke events: {today.map((b) => `${b.booking_code} (${b.slot})`).join(", ")}
+                Today&apos;s events: {today.map((b) => `${b.booking_code} (${b.slot})`).join(", ")}
               </p>
             )}
           </div>

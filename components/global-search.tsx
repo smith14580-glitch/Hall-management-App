@@ -145,7 +145,7 @@ export function GlobalSearch() {
                     </section>
                   )}
                   {bookings.length === 0 && customers.length === 0 && quotations.length === 0 && (
-                    <p className="px-3 py-6 text-center text-sm text-ink/50">Kuch nahi mila.</p>
+                    <p className="px-3 py-6 text-center text-sm text-ink/50">No results found.</p>
                   )}
                 </>
               )}

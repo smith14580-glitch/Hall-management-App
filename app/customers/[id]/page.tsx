@@ -60,7 +60,7 @@ export default function CustomerDetailPage() {
     return (
       <div>
         <PageHeader title="Customer" />
-        <ConnectionError error={error || new Error("Customer nahi mila.")} onRetry={() => void load()} />
+        <ConnectionError error={error || new Error("Customer not found.")} onRetry={() => void load()} />
         <button type="button" onClick={() => router.push("/customers")} className={`${secondaryButtonClass} mt-4`}>
           <ArrowLeft className="h-4 w-4" /> Back to Customers
         </button>
@@ -107,7 +107,7 @@ export default function CustomerDetailPage() {
         <div className="min-w-0 rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line lg:col-span-2">
           <h2 className="font-display text-lg font-bold text-charcoal">Booking History</h2>
           {bookings.length === 0 ? (
-            <EmptyState message="Is customer ki koi booking nahi hai." />
+            <EmptyState message="This customer has no bookings." />
           ) : (
             <div className="mt-4 overflow-x-auto">
               <table className="w-full min-w-120 text-left text-sm">

@@ -12,8 +12,8 @@ import { useLanguage } from "@/lib/i18n";
 import { goldButtonClass, inputClass, labelClass } from "@/components/ui";
 
 const schema = z.object({
-  phone: z.string().min(10, "Phone number likhna zaroori hai (kam az kam 10 digits)."),
-  password: z.string().min(1, "Password likhna zaroori hai."),
+  phone: z.string().min(10, "Phone number is required (at least 10 digits)."),
+  password: z.string().min(1, "Password is required."),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -57,12 +57,12 @@ export default function LoginPage() {
     } catch (err) {
       if (isConnectionError(err)) {
         setError(
-          "Backend se connect nahi ho raha — NEXT_PUBLIC_API_URL check karo. Backend (FastAPI) chal raha hai? / Cannot reach the backend — check NEXT_PUBLIC_API_URL. Is the backend (FastAPI) running?",
+          "Cannot reach the backend — check NEXT_PUBLIC_API_URL. Is the backend (FastAPI) running?",
         );
       } else if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError("Login nahi ho saka — dobara try karo.");
+        setError("Sign-in failed. Please try again.");
       }
     }
   };
@@ -147,8 +147,8 @@ export default function LoginPage() {
           {t("demoViewNote")}
         </p>
         <p className="mt-2 text-center text-xs leading-relaxed text-ink/50">
-          Manager ya staff — apne phone number aur password se login karo.
-          Account manager banata hai; yahan koi self-registration nahi hai.
+          Managers and staff — sign in with your phone number and password.
+          Accounts are created by the manager; self-registration is not available.
         </p>
       </div>
     </div>

@@ -49,7 +49,7 @@ export default function CustomersPage() {
 
   return (
     <div>
-      <PageHeader title={t("customers")} subtitle="Name ya phone se search karo. Customer booking se khud banta hai." />
+      <PageHeader title={t("customers")} subtitle="Search by name or phone. Customer records are created automatically from bookings." />
 
       <div className="relative mb-5 max-w-md">
         <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
@@ -60,7 +60,7 @@ export default function CustomersPage() {
             setSearch(e.target.value);
             setPage(0);
           }}
-          placeholder="Name ya phone…"
+          placeholder="Name or phone…"
           className={`${inputClass} ps-9`}
           aria-label={t("search")}
         />
@@ -71,7 +71,7 @@ export default function CustomersPage() {
       ) : loading ? (
         <LoadingState />
       ) : rows.length === 0 ? (
-        <EmptyState message="No customers yet. Pehli booking bante hi customer yahan aa jayega." />
+        <EmptyState message="No customers yet. A customer record is created with the first booking." />
       ) : (
         <>
           <div className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-stone-line">

@@ -148,11 +148,11 @@ export default function TablesPage() {
     e.preventDefault();
     setFormError("");
     if (!number.trim()) {
-      setFormError("Table number likho (jaise T-13).");
+      setFormError("Enter a table number (e.g. T-13).");
       return;
     }
     if (capacity < 1) {
-      setFormError("Capacity kam az kam 1 honi chahiye.");
+      setFormError("Capacity must be at least 1.");
       return;
     }
     setBusy(true);
@@ -165,7 +165,7 @@ export default function TablesPage() {
       await loadBoard();
       await loadUtilization();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Table add nahi hui.");
+      setFormError(err instanceof ApiError ? err.message : "Table could not be added.");
     } finally {
       setBusy(false);
     }
@@ -183,11 +183,11 @@ export default function TablesPage() {
       bulk.end < bulk.start ||
       bulk.capacity < 1
     ) {
-      setFormError("Bulk range aur seats sahi likho (start ≤ end).");
+      setFormError("Enter a valid bulk range and seat count (start ≤ end).");
       return;
     }
     if (bulk.end - bulk.start + 1 > 100) {
-      setFormError("Ek waqt me 100 se zyada tables add na karo.");
+      setFormError("Do not add more than 100 tables at a time.");
       return;
     }
     const existing = new Set(rows.map((row) => row.table_number.toLowerCase()));
@@ -202,7 +202,7 @@ export default function TablesPage() {
       }
     }
     if (pending.length === 0) {
-      setBulkMsg(`${skipped} table number(s) pehle se exist karte hain — prefix ya range change karo.`);
+      setBulkMsg(`${skipped} table number(s) already exist — change the prefix or range.`);
       return;
     }
     setBusy(true);
@@ -233,7 +233,7 @@ export default function TablesPage() {
         });
       }
       setBulkMsg(
-        `${added} table(s) add ho gaye${skipped ? `, ${skipped} skipped (already exist)` : ""}${failed ? `, ${failed} fail` : ""}.`,
+        `${added} table(s) added${skipped ? `, ${skipped} skipped (already exist)` : ""}${failed ? `, ${failed} fail` : ""}.`,
       );
       await load();
       await loadBoard();
@@ -255,7 +255,7 @@ export default function TablesPage() {
       await loadBoard();
       await loadUtilization();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Update nahi ho saka.");
+      setFormError(err instanceof ApiError ? err.message : "Could not update the table.");
     }
   };
 
@@ -268,7 +268,7 @@ export default function TablesPage() {
 
   const saveEdit = async (row: HallTable) => {
     if (!editNumber.trim() || editCapacity < 1) {
-      setFormError("Table number aur capacity sahi likho.");
+      setFormError("Enter a valid table number and capacity.");
       return;
     }
     setBusy(true);
@@ -279,7 +279,7 @@ export default function TablesPage() {
       await loadBoard();
       await loadUtilization();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Table update nahi hui.");
+      setFormError(err instanceof ApiError ? err.message : "Table could not be updated.");
     } finally {
       setBusy(false);
     }
@@ -299,7 +299,7 @@ export default function TablesPage() {
       await loadBoard();
       await loadUtilization();
     } catch (err) {
-      setDeleteError(err instanceof ApiError ? err.message : "Table delete nahi hui.");
+      setDeleteError(err instanceof ApiError ? err.message : "Table could not be deleted.");
     } finally {
       setDeleteBusy(false);
     }
@@ -313,7 +313,7 @@ export default function TablesPage() {
     <div>
       <PageHeader
         title={t("tables")}
-        subtitle="Table numbers, capacity, live slot board aur allocation — sab ek jagah."
+        subtitle="Table numbers, capacity, live slot board, and allocations — all in one place."
       />
 
       {error ? (
@@ -328,14 +328,14 @@ export default function TablesPage() {
             <StatCard
               label="Hall Capacity (tables)"
               value={hallCapacity === null ? "Not set" : String(hallCapacity)}
-              sub={hallCapacity === null ? "Settings me capacity set karo — tab tak allocation kaam nahi karegi." : "Set in hall settings"}
+              sub={hallCapacity === null ? "Set the capacity in Settings — allocations will not work until then." : "Set in hall settings"}
             />
           </div>
 
           {hallCapacity === null && (
             <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-              Hall capacity abhi set nahi hai (ARCHITECTURE.md Q4). Capacity set kiye baghair table
-              allocation enforce nahi ho sakti — Settings / hall details me capacity_tables bharo.
+              Hall capacity is not set yet (ARCHITECTURE.md Q4). Table allocation cannot be enforced
+              without a capacity — set capacity_tables in Settings / hall details.
             </p>
           )}
 
@@ -372,7 +372,7 @@ export default function TablesPage() {
               </button>
             </form>
             <p className="mt-2 text-xs text-ink/60">
-              Bulk add <span className="font-semibold text-charcoal">T-{String(bulk.start).padStart(2, "0")}</span> se <span className="font-semibold text-charcoal">T-{String(bulk.end).padStart(2, "0")}</span> tak, har table {bulk.capacity || 0} seats — total {Math.max(0, bulk.end - bulk.start + 1)} tables.
+              Bulk add <span className="font-semibold text-charcoal">T-{String(bulk.start).padStart(2, "0")}</span> to <span className="font-semibold text-charcoal">T-{String(bulk.end).padStart(2, "0")}</span>, {bulk.capacity || 0} seats per table — total {Math.max(0, bulk.end - bulk.start + 1)} tables.
             </p>
           </div>
           {formError && <p className="mt-3 text-sm text-red-600" role="alert">{formError}</p>}
@@ -447,7 +447,7 @@ export default function TablesPage() {
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <h2 className="font-display text-base font-bold text-charcoal">Table utilization</h2>
-                <p className="text-xs text-ink/50">Month me har table kitne events me use hui (active slots ke against).</p>
+                <p className="text-xs text-ink/50">Number of events each table was used for during the month (across active slots).</p>
               </div>
               <div>
                 <label htmlFor="util_month" className={labelClass}>Month</label>
@@ -485,7 +485,7 @@ export default function TablesPage() {
 
           <div className="mt-6 overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-stone-line">
             {rows.length === 0 ? (
-              <EmptyState message="No tables yet — upar se pehli table add karo." />
+              <EmptyState message="No tables yet — add the first table above." />
             ) : (
               <table className="w-full min-w-150 text-left text-sm">
                 <thead>
@@ -574,8 +574,8 @@ export default function TablesPage() {
       {deleteTarget && (
         <Modal title="Delete table" onClose={() => (deleteBusy ? null : setDeleteTarget(null))}>
           <p className="text-sm text-ink/70">
-            <span className="font-semibold text-charcoal">{deleteTarget.table_number}</span> permanently delete karni hai?
-            Agar is table par booking allocation history hai to neeche force delete tick karo — warning ke saath.
+            <span className="font-semibold text-charcoal">{deleteTarget.table_number}</span> — permanently delete this table?
+            If this table has booking allocation history, select force delete below — proceed with caution.
           </p>
           <label className="mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
             <input
@@ -585,8 +585,8 @@ export default function TablesPage() {
               className="mt-0.5 h-4 w-4"
             />
             <span>
-              Force delete: is table ki old booking allocations bhi delete ho jayengi.
-              Sirf tab use karo jab table permanently hata rahe ho.
+              Force delete: older booking allocations for this table will also be deleted.
+              Only use this when permanently removing the table.
             </span>
           </label>
           {deleteError && <p className="mt-3 text-sm text-red-600" role="alert">{deleteError}</p>}

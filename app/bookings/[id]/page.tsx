@@ -48,9 +48,9 @@ import { CreditNoteModal } from "@/components/credit-note";
 import { Invoice } from "@/components/invoice";
 
 const paymentSchema = z.object({
-  amount: z.coerce.number().positive("Amount 0 se zyada hona chahiye."),
-  payment_date: z.string().min(1, "Date chuno."),
-  method: z.string().min(1, "Method chuno."),
+  amount: z.coerce.number().positive("Amount must be greater than 0."),
+  payment_date: z.string().min(1, "Select a date."),
+  method: z.string().min(1, "Select a payment method."),
   reference: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -152,10 +152,10 @@ export default function BookingDetailPage() {
       setBooking(updated);
       if (action === "cancel") setShowCancel(false);
       toast.success(
-        action === "confirm" ? "Booking confirm ho gayi." : action === "complete" ? "Booking complete ho gayi." : "Booking cancel ho gayi.",
+        action === "confirm" ? "Booking confirmed." : action === "complete" ? "Booking completed." : "Booking cancelled.",
       );
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : "Action fail ho gaya — dobara try karo.");
+      setActionError(err instanceof ApiError ? err.message : "The action could not be completed. Please try again.");
     } finally {
       setActionBusy(false);
     }
@@ -177,25 +177,25 @@ export default function BookingDetailPage() {
       toast.success(`Payment recorded — ${formatPKR(created.amount)}`);
       await load();
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : "Payment save nahi hui.");
+      setActionError(err instanceof ApiError ? err.message : "Payment could not be recorded.");
     }
   };
 
   const onVoidPayment = async () => {
     if (!voiding) return;
     if (!voidReason.trim()) {
-      setVoidError("Void karne ki wajah likhna zaroori hai.");
+      setVoidError("A reason is required to void a payment.");
       return;
     }
     try {
       await voidPayment(voiding.id, voidReason.trim());
-      toast.success("Payment void ho gayi.");
+      toast.success("Payment voided.");
       setVoiding(null);
       setVoidReason("");
       setVoidError("");
       await load();
     } catch (err) {
-      setVoidError(err instanceof ApiError ? err.message : "Void nahi ho saka.");
+      setVoidError(err instanceof ApiError ? err.message : "The payment could not be voided.");
     }
   };
 
@@ -203,11 +203,11 @@ export default function BookingDetailPage() {
     event.preventDefault();
     setRefundError("");
     if (!refundForm.amount || Number(refundForm.amount) <= 0) {
-      setRefundError("Amount 0 se zyada hona chahiye.");
+      setRefundError("Amount must be greater than 0.");
       return;
     }
     if (!refundForm.reason.trim()) {
-      setRefundError("Refund ki wajah likhna zaroori hai.");
+      setRefundError("A reason is required for a refund.");
       return;
     }
     setRefundBusy(true);
@@ -224,7 +224,7 @@ export default function BookingDetailPage() {
       setRefundForm({ amount: "", refund_date: todayISO(), method: "cash", reason: "", reference: "" });
       await load();
     } catch (err) {
-      setRefundError(err instanceof ApiError ? err.message : "Refund save nahi hua.");
+      setRefundError(err instanceof ApiError ? err.message : "Refund could not be recorded.");
     } finally {
       setRefundBusy(false);
     }
@@ -253,7 +253,7 @@ export default function BookingDetailPage() {
       const result = await allocateTables(id, selectedTables);
       setAllocated(result);
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : "Tables allocate nahi ho sake.");
+      setActionError(err instanceof ApiError ? err.message : "Tables could not be allocated.");
     } finally {
       setTableBusy(false);
     }
@@ -264,7 +264,7 @@ export default function BookingDetailPage() {
     return (
       <div>
         <PageHeader title="Booking Detail" />
-        <ConnectionError error={error || new Error("Booking nahi mili.")} onRetry={() => void load()} />
+        <ConnectionError error={error || new Error("Booking not found.")} onRetry={() => void load()} />
         <button type="button" onClick={() => router.push("/bookings")} className={`${secondaryButtonClass} mt-4`}>
           <ArrowLeft className="h-4 w-4" /> Back to Bookings
         </button>
@@ -503,7 +503,7 @@ export default function BookingDetailPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="font-display text-lg font-bold text-charcoal">Refunds / Credit Notes</h2>
-                <p className="mt-1 text-sm text-ink/60">Refund hone par received amount khud kam ho jata hai.</p>
+                <p className="mt-1 text-sm text-ink/60">Recording a refund automatically reduces the amount received.</p>
               </div>
               {booking.amount_paid > 0 && (
                 <button type="button" data-requires-auth onClick={() => setShowRefundForm((v) => !v)} className={secondaryButtonClass}>
@@ -585,7 +585,7 @@ export default function BookingDetailPage() {
             )}
 
             {refunds.length === 0 ? (
-              <p className="mt-4 text-sm text-ink/60">Koi refund record nahi.</p>
+              <p className="mt-4 text-sm text-ink/60">No refunds recorded.</p>
             ) : (
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full text-left text-sm">
@@ -775,7 +775,7 @@ export default function BookingDetailPage() {
       {voiding && (
         <Modal title={`Void Payment ${voiding.receipt_number}`} onClose={() => setVoiding(null)}>
           <p className="text-sm text-ink/70">
-            {formatPKR(voiding.amount)} ki payment void ho jayegi aur booking ka balance dobara update hoga.
+            The payment of {formatPKR(voiding.amount)} will be voided and the booking balance will be recalculated.
           </p>
           <label htmlFor="void_reason" className={`${labelClass} mt-4`}>Reason *</label>
           <textarea

@@ -38,7 +38,7 @@ Copy `.env.local.example` to `.env.local` and fill in real values.
 When `NEXT_PUBLIC_USE_SAMPLE_DATA=true`, login works **without any backend**:
 
 - **Demo login: phone `03000000000`, password `demo1234`** (shown on the login page too).
-- A "Demo dekhein — bina login ke" button on the login page opens the dashboard directly.
+- A "View demo — no sign-in required" button on the login page opens the dashboard directly.
 - Every page shows a "SAMPLE DATA — demo only" banner; nothing is real data.
 
 ## Replacing the broken scaffold in the user's repo
@@ -55,7 +55,7 @@ create-next-app template. To replace it:
    because the repo root has no `package.json`.
 5. In Vercel → Project → Settings → Environment Variables, set
    `NEXT_PUBLIC_API_URL` to the real backend URL and redeploy. Until it is
-   set, every page shows an honest "Backend se connect nahi ho raha" error —
+   set, every page shows an honest "Unable to connect to the backend" error —
    that is by design, not a bug.
 
 ## Backend note (important)

@@ -148,11 +148,11 @@ export default function ExpensesPage() {
     event.preventDefault();
     setFormError("");
     if (!form.description.trim()) {
-      setFormError("Description likhna zaroori hai.");
+      setFormError("Description is required.");
       return;
     }
     if (!form.amount || Number(form.amount) <= 0) {
-      setFormError("Amount 0 se zyada hona chahiye.");
+      setFormError("Amount must be greater than 0.");
       return;
     }
     setSaving(true);
@@ -168,15 +168,15 @@ export default function ExpensesPage() {
       };
       if (editing) {
         await updateExpense(editing.id, body);
-        toast.success("Expense update ho gaya.");
+        toast.success("Expense updated.");
       } else {
         await createExpense(body);
-        toast.success("Expense add ho gaya.");
+        toast.success("Expense added.");
       }
       setShowForm(false);
       await load();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Expense save nahi hua.");
+      setFormError(err instanceof ApiError ? err.message : "Expense could not be saved.");
     } finally {
       setSaving(false);
     }
@@ -186,11 +186,11 @@ export default function ExpensesPage() {
     if (!deleting) return;
     try {
       await deleteExpense(deleting.id);
-      toast.success("Expense delete ho gaya.");
+      toast.success("Expense deleted.");
       setDeleting(null);
       await load();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Expense delete nahi hua.");
+      toast.error(err instanceof ApiError ? err.message : "Expense could not be deleted.");
     }
   };
 
@@ -200,7 +200,7 @@ export default function ExpensesPage() {
     <div>
       <PageHeader
         title={t("expenses")}
-        subtitle="Catering, decoration, staff, utilities — sab kharche yahan record karo. Profit reports me khud adjust honge."
+        subtitle="Record all catering, decoration, staff, and utility costs here. Profit reports are updated automatically."
         actions={
           <>
             <button
@@ -251,7 +251,7 @@ export default function ExpensesPage() {
       ) : loading ? (
         <LoadingState />
       ) : rows.length === 0 ? (
-        <EmptyState message="Is month ki koi expense nahi hai. Add Expense se shuru karo." />
+        <EmptyState message="No expenses recorded for this month. Use Add Expense to create one." />
       ) : (
         <div className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-stone-line">
           <table className="w-full min-w-180 text-left text-sm">
@@ -407,7 +407,7 @@ export default function ExpensesPage() {
       {deleting && (
         <Modal title="Delete Expense" onClose={() => setDeleting(null)}>
           <p className="text-sm text-ink/70">
-            <strong>{deleting.description}</strong> ({formatPKR(deleting.amount)}) delete karna hai? Ye action undo nahi hoga.
+            Delete <strong>{deleting.description}</strong> ({formatPKR(deleting.amount)})? This action cannot be undone.
           </p>
           <div className="mt-4 flex gap-2">
             <button type="button" onClick={() => void confirmDelete()} className="inline-flex min-h-10 items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">

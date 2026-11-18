@@ -697,7 +697,7 @@ export default function ReportsPage() {
     <div>
       <PageHeader
         title={t("reports")}
-        subtitle="Bookings, revenue, outstanding, profit & loss, cash closing, occupancy aur attendance — sab ek jagah."
+        subtitle="Bookings, revenue, outstanding, profit & loss, cash closing, occupancy, and attendance — all in one place."
         actions={
           <>
             <button type="button" onClick={() => window.print()} className={secondaryButtonClass}>
@@ -856,13 +856,13 @@ export default function ReportsPage() {
                 />
               </div>
               <div className="mt-6 rounded-xl bg-white p-4 text-sm text-ink/70 shadow-sm ring-1 ring-stone-line">
-                {monthLabel(occupancy.month || month)} mein total {num(occupancy.total_slots)} slots me se {num(occupancy.booked_slots)} booked hain.
+                In {monthLabel(occupancy.month || month)}, {num(occupancy.booked_slots)} of {num(occupancy.total_slots)} total slots are booked.
               </div>
               <div className="mt-6 rounded-xl bg-white p-4 shadow-sm ring-1 ring-stone-line sm:p-5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h2 className="font-display text-base font-bold text-charcoal">Slot heatmap</h2>
-                    <p className="text-xs text-ink/50">Har din ka day/night slot — khaali din jaldi pick karo.</p>
+                    <p className="text-xs text-ink/50">Day and night slots for each date — free dates are shown in gold.</p>
                   </div>
                   <div className="flex items-center gap-3 text-[10px] font-semibold text-ink/60">
                     <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-gold" /> Day</span>
@@ -925,7 +925,7 @@ export default function ReportsPage() {
                     <StatCard label="90+ days" value={formatPKR(aging.d90plus)} />
                   </div>
                   <p className="mt-3 text-xs text-ink/50">
-                    Aging event date ke hisaab se hai — overdue ka matlab event date guzar chuki hai.
+                    Aging is based on the event date — overdue means the event date has passed.
                   </p>
                 </>
               ) : (
