@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { fetchBookings, fetchCustomers, fetchQuotations } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { Spinner } from "@/components/ui";
 import type { Booking, Customer, Quotation } from "@/lib/types";
 
 export function GlobalSearch() {
@@ -100,9 +101,11 @@ export function GlobalSearch() {
             </div>
             <div className="max-h-[60vh] overflow-y-auto p-2">
               {!query.trim() ? (
-                <p className="px-3 py-6 text-center text-sm text-ink/50">Type to search bookings, customers aur quotations.</p>
+                <p className="px-3 py-6 text-center text-sm text-ink/50">Type to search bookings, customers, and quotations.</p>
               ) : loading ? (
-                <p className="px-3 py-6 text-center text-sm text-ink/50">Searching…</p>
+                <p className="flex items-center justify-center gap-2 px-3 py-6 text-center text-sm text-ink/50">
+                  <Spinner className="h-4 w-4" /> Searching…
+                </p>
               ) : (
                 <>
                   {bookings.length > 0 && (

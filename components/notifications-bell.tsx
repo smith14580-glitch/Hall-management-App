@@ -10,6 +10,7 @@ import {
   markNotificationRead,
 } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
+import { Spinner } from "@/components/ui";
 import type { AppNotification } from "@/lib/types";
 
 export function NotificationsBell() {
@@ -108,7 +109,9 @@ export function NotificationsBell() {
           </div>
           <div className="max-h-80 overflow-y-auto">
             {loading ? (
-              <p className="px-4 py-6 text-center text-sm text-ink/50">Loading…</p>
+              <p className="flex items-center justify-center gap-2 px-4 py-6 text-center text-sm text-ink/50">
+                <Spinner className="h-4 w-4" /> Loading…
+              </p>
             ) : items.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-ink/50">No notifications.</p>
             ) : (

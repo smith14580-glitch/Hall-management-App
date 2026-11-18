@@ -25,6 +25,7 @@ import { useLanguage } from "@/lib/i18n";
 import { LOGIN_REQUIRED_EVENT, USE_SAMPLE_DATA } from "@/lib/api";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { GlobalSearch } from "@/components/global-search";
+import { LoadingScreen } from "@/components/loading-screen";
 import { NotificationsBell } from "@/components/notifications-bell";
 
 interface NavItem {
@@ -140,11 +141,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-offwhite text-sm text-ink/60">
-        {t("loading")}
-      </div>
-    );
+    return <LoadingScreen fullPage />;
   }
 
   const items = NAV.filter((item) => isManager || isDemo || !item.managerOnly);

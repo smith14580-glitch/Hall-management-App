@@ -6,6 +6,7 @@ import { LanguageProvider } from "@/lib/i18n";
 import { SettingsProvider } from "@/lib/settings";
 import { AppShell } from "@/components/layout";
 import { RegisterSW } from "@/components/RegisterSW";
+import { RouteProgress } from "@/components/route-progress";
 import { ToastProvider } from "@/components/toast";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-body", display: "swap" });
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable} ${nastaliq.variable}`}>
       <body>
+        <RouteProgress />
         <RegisterSW />
         <LanguageProvider>
           <AuthProvider>

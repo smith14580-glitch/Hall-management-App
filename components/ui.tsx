@@ -11,20 +11,27 @@ export function Spinner({ className }: { className?: string }) {
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse rounded-md bg-stone-200/80", className)} aria-hidden="true" />;
+  return <div className={cn("skeleton-shimmer rounded-md bg-stone-200/80", className)} aria-hidden="true" />;
 }
 
 export function LoadingState({ message }: { message?: string }) {
   const { t } = useLanguage();
+  const label = message || t("loading");
   return (
-    <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line" role="status" aria-label={message || t("loading")}>
+    <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-stone-line" role="status" aria-label={label}>
+      <div className="mb-5 flex items-center gap-3">
+        <span className="relative grid h-8 w-8 shrink-0 place-items-center" aria-hidden="true">
+          <span className="loader-orbit absolute inset-0 rounded-full" />
+          <span className="font-display text-xs font-bold text-gold">M</span>
+        </span>
+        <p className="text-sm font-semibold text-ink/70">{label}</p>
+      </div>
       <div className="space-y-3">
         <Skeleton className="h-6 w-1/3" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-5/6" />
         <Skeleton className="h-4 w-2/3" />
       </div>
-      <span className="sr-only">{message || t("loading")}</span>
     </div>
   );
 }
