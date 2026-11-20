@@ -1,5 +1,5 @@
 /* MARQUE ONE service worker — app shell cache-first, API never cached. */
-const VERSION = "marque-one-v2";
+const VERSION = "marque-one-v3";
 const STATIC_CACHE = `${VERSION}-static`;
 
 const CORE_ASSETS = [
