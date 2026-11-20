@@ -67,12 +67,13 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-charcoal px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
+      <div className="w-full max-w-md rounded-2xl border-t-4 border-gold bg-white p-8 shadow-2xl">
         <div className="text-center">
-          <p className="font-display text-3xl font-bold text-charcoal">
+          <span className="mx-auto mb-4 block h-1 w-16 rounded-full bg-gradient-to-r from-gold-dark via-gold to-gold-light" aria-hidden />
+          <p className="font-display text-3xl font-bold tracking-tight text-charcoal">
             MARQUE <span className="text-gold">ONE</span>
           </p>
-          <p className="mt-2 text-sm text-ink/60">Marriage Hall Management System</p>
+          <p className="mt-2 text-sm tracking-wide text-ink/60">Marriage Hall Management System</p>
         </div>
 
         {notice && (

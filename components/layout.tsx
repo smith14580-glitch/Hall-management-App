@@ -235,7 +235,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col lg:ps-64">
-        <header className="sticky top-0 z-20 flex min-h-14 items-center gap-2 border-b border-stone-line bg-white px-3 py-2 sm:px-6 sm:py-3 sm:min-h-16 sm:gap-3">
+        <header className="sticky top-0 z-20 flex min-h-14 items-center gap-2 border-b-2 border-gold/30 bg-white/95 px-3 py-2 shadow-sm backdrop-blur sm:px-6 sm:py-3 sm:min-h-16 sm:gap-3">
           <button
             type="button"
             className="rounded-lg p-2 text-charcoal hover:bg-offwhite lg:hidden"

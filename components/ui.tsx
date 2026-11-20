@@ -172,7 +172,8 @@ export function PageHeader({
   return (
     <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h1 className="font-display text-2xl font-bold text-charcoal sm:text-3xl">{title}</h1>
+        <span className="mb-2 block h-1 w-12 rounded-full bg-gradient-to-r from-gold to-gold-dark" aria-hidden />
+        <h1 className="font-display text-2xl font-bold tracking-tight text-charcoal sm:text-3xl">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-ink/60">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -248,13 +249,16 @@ export function Modal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white shadow-xl sm:rounded-2xl">
-        <div className="flex items-center justify-between border-b border-stone-line px-5 py-4">
-          <h2 className="font-display text-lg font-bold text-charcoal">{title}</h2>
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl">
+        <div className="flex items-center justify-between border-b border-gold/30 bg-charcoal px-5 py-4">
+          <h2 className="font-display text-lg font-bold text-white">
+            <span className="me-2 text-gold" aria-hidden>◆</span>
+            {title}
+          </h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-2 py-1 text-xl leading-none text-ink/60 hover:bg-offwhite hover:text-charcoal"
+            className="rounded-lg px-2 py-1 text-xl leading-none text-white/60 hover:bg-white/10 hover:text-gold"
             aria-label="Close"
           >
             ×
@@ -267,18 +271,18 @@ export function Modal({
 }
 
 export const inputClass =
-  "w-full rounded-lg border border-stone-line bg-white px-3 py-2.5 text-sm text-charcoal outline-none focus:border-gold focus:ring-2 focus:ring-gold/30";
+  "w-full rounded-lg border border-stone-line bg-white px-3 py-2.5 text-sm text-charcoal shadow-sm outline-none transition hover:border-gold/60 focus:border-gold focus:ring-2 focus:ring-gold/30";
 
 export const labelClass = "mb-1.5 block text-sm font-semibold text-charcoal";
 
 export const primaryButtonClass =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-charcoal px-5 py-2.5 text-sm font-semibold text-white hover:bg-charcoal-light disabled:opacity-50";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-charcoal px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-px hover:bg-charcoal-light hover:shadow-lg disabled:opacity-50";
 
 export const goldButtonClass =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-gold px-5 py-2.5 text-sm font-semibold text-charcoal hover:bg-gold-dark hover:text-white disabled:opacity-50";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-gold px-5 py-2.5 text-sm font-semibold text-charcoal shadow-[0_6px_16px_rgba(217,154,54,0.28)] transition hover:-translate-y-px hover:bg-gold-dark hover:text-white hover:shadow-[0_10px_22px_rgba(217,154,54,0.35)] disabled:opacity-50";
 
 export const secondaryButtonClass =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-stone-line bg-white px-4 py-2.5 text-sm font-semibold text-charcoal hover:bg-offwhite disabled:opacity-50";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-stone-line bg-white px-4 py-2.5 text-sm font-semibold text-charcoal shadow-sm transition hover:border-gold/60 hover:bg-offwhite hover:text-gold-dark disabled:opacity-50";
 
 export const dangerButtonClass =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-red-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-50";
