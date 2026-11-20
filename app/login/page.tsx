@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, Info, LogIn } from "lucide-react";
-import { ApiError, isConnectionError, USE_SAMPLE_DATA } from "@/lib/api";
+import { Info, LogIn } from "lucide-react";
+import { ApiError, isConnectionError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useLanguage } from "@/lib/i18n";
 import { goldButtonClass, inputClass, labelClass } from "@/components/ui";
@@ -17,9 +17,6 @@ const schema = z.object({
 });
 
 type FormValues = z.infer<typeof schema>;
-
-const DEMO_PHONE = "03000000000";
-const DEMO_PASSWORD = "demo1234";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -127,26 +124,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <button
-          type="button"
-          onClick={() => router.push("/")}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-stone-line bg-offwhite px-3 py-2.5 text-sm font-semibold text-charcoal hover:bg-stone-100"
-        >
-          <Eye className="h-4 w-4" />
-          {t("browseDemo")}
-        </button>
-
-        {USE_SAMPLE_DATA && (
-          <p className="mt-4 rounded-lg bg-gold-light px-3 py-2 text-xs leading-relaxed text-gold-dark" role="note">
-            Demo login (sample mode ON): phone <strong>{DEMO_PHONE}</strong>, password{" "}
-            <strong>{DEMO_PASSWORD}</strong>
-          </p>
-        )}
-
         <p className="mt-6 text-center text-xs leading-relaxed text-ink/50">
-          {t("demoViewNote")}
-        </p>
-        <p className="mt-2 text-center text-xs leading-relaxed text-ink/50">
           Managers and staff — sign in with your phone number and password.
           Accounts are created by the manager; self-registration is not available.
         </p>

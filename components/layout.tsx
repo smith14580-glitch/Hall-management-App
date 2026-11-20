@@ -22,7 +22,7 @@ import {
 import { cn } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
 import { useLanguage } from "@/lib/i18n";
-import { LOGIN_REQUIRED_EVENT, USE_SAMPLE_DATA } from "@/lib/api";
+import { LOGIN_REQUIRED_EVENT } from "@/lib/api";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { GlobalSearch } from "@/components/global-search";
 import { LoadingScreen } from "@/components/loading-screen";
@@ -98,16 +98,23 @@ function LanguageToggle() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading, logout, isManager, isDemo } = useAuth();
+  const { user, loading, logout, isManager } = useAuth();
   const { t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Never force login: visitors browse in demo view. Logged-in staff keep
-  // their attendance-only home.
+  // Logged-in staff keep their attendance-only home. Logged-out visitors
+  // are sent to /login below — there is no public demo view.
   useEffect(() => {
     if (loading || !user || isManager) return;
     if (isManagerPath(pathname)) router.replace("/attendance");
   }, [loading, user, isManager, pathname, router]);
+
+  // A real session is required everywhere: logged-out users go straight to
+  // /login instead of browsing pages with sample/demo data.
+  useEffect(() => {
+    if (loading || pathname === "/login" || user) return;
+    router.replace("/login");
+  }, [loading, pathname, user, router]);
 
   // Write actions dispatch this event when no session exists.
   useEffect(() => {
@@ -140,17 +147,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  if (loading) {
+  if (loading || !user) {
     return <LoadingScreen fullPage />;
   }
 
-  const items = NAV.filter((item) => isManager || isDemo || !item.managerOnly);
+  const items = NAV.filter((item) => isManager || !item.managerOnly);
   const active = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
   const handleLogout = () => {
     logout();
-    router.replace("/");
+    router.replace("/login");
   };
 
   const sidebar = (
@@ -160,7 +167,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           MARQUE <span className="text-gold">ONE</span>
         </p>
         <p className="mt-1 text-xs text-white/50">
-          {user ? `${isManager ? t("managerApp") : t("staffApp")} · ${user.full_name}` : t("demoView")}
+          {`${isManager ? t("managerApp") : t("staffApp")} · ${user.full_name}`}
         </p>
       </div>
       <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Main navigation">
@@ -270,24 +277,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )}
           </div>
         </header>
-
-        {isDemo && (
-          <div
-            className="border-b border-gold/40 bg-gold-light px-4 py-2 text-center text-sm font-semibold text-charcoal"
-            role="status"
-          >
-            {t("demoViewBanner")}{" "}
-            <Link href="/login" className="text-gold-dark underline underline-offset-2">
-              {t("login")}
-            </Link>
-          </div>
-        )}
-
-        {USE_SAMPLE_DATA && (
-          <div className="bg-amber-400 px-4 py-2 text-center text-sm font-bold text-charcoal" role="status">
-            {t("sampleBanner")}
-          </div>
-        )}
 
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">{children}</main>
 
