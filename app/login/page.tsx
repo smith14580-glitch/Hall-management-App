@@ -25,6 +25,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [nextTarget, setNextTarget] = useState("");
+  const [showForgot, setShowForgot] = useState(false);
   const {
     register,
     handleSubmit,
@@ -123,6 +124,24 @@ export default function LoginPage() {
             {isSubmitting ? t("loading") : t("login")}
           </button>
         </form>
+
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={() => setShowForgot((open) => !open)}
+            className="text-xs font-semibold text-gold-dark hover:underline"
+            aria-expanded={showForgot}
+          >
+            Forgot password?
+          </button>
+          {showForgot && (
+            <p className="mt-2 rounded-lg bg-offwhite px-3 py-2 text-xs leading-relaxed text-ink/70" role="note">
+              Passwords are reset by your manager. Ask the manager to open{" "}
+              <strong>Employees → Reset password</strong> for your account, then sign in with the
+              new password.
+            </p>
+          )}
+        </div>
 
         <p className="mt-6 text-center text-xs leading-relaxed text-ink/50">
           Managers and staff — sign in with your phone number and password.

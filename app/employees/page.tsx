@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Download, IdCard, Pencil, Plus, Printer, QrCode, Search, Trash2, Wallet } from "lucide-react";
+import { CheckCircle2, Download, IdCard, KeyRound, Pencil, Plus, Printer, QrCode, Search, Trash2, Wallet } from "lucide-react";
 import {
   ApiError,
   createEmployee,
@@ -9,6 +9,7 @@ import {
   deleteEmployee,
   fetchEmployeeSalary,
   fetchEmployees,
+  resetEmployeePassword,
   saveEmployeeSalary,
   updateSalary,
 } from "@/lib/api";
@@ -49,6 +50,11 @@ export default function EmployeesPage() {
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [deactivating, setDeactivating] = useState<Employee | null>(null);
+  const [resetTarget, setResetTarget] = useState<Employee | null>(null);
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetError, setResetError] = useState("");
+  const [resetDone, setResetDone] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -162,6 +168,33 @@ export default function EmployeesPage() {
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "Could not deactivate the employee.");
       setDeactivating(null);
+    }
+  };
+
+  const openReset = (row: Employee) => {
+    setResetError("");
+    setResetDone(false);
+    setResetPassword("");
+    setResetTarget(row);
+  };
+
+  const confirmReset = async () => {
+    if (!resetTarget) return;
+    const next = resetPassword.trim();
+    if (next.length < 8 || !/[A-Za-z]/.test(next) || !/\d/.test(next)) {
+      setResetError("Use at least 8 characters with one letter and one number.");
+      return;
+    }
+    setResetBusy(true);
+    setResetError("");
+    try {
+      await resetEmployeePassword(resetTarget.id, next);
+      setResetDone(true);
+      setResetPassword("");
+    } catch (err) {
+      setResetError(err instanceof ApiError ? err.message : "Password could not be reset.");
+    } finally {
+      setResetBusy(false);
     }
   };
 
@@ -389,6 +422,9 @@ export default function EmployeesPage() {
                       </button>
                       <button type="button" onClick={() => void openSalary(row)} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-stone-line bg-white px-2.5 py-1.5 text-xs font-semibold text-charcoal hover:bg-offwhite">
                         <Wallet className="h-3.5 w-3.5" /> {t("salary")}
+                      </button>
+                      <button type="button" onClick={() => openReset(row)} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-stone-line bg-white px-2.5 py-1.5 text-xs font-semibold text-charcoal hover:bg-offwhite">
+                        <KeyRound className="h-3.5 w-3.5" /> Reset password
                       </button>
                       {row.is_active && (
                         <button type="button" onClick={() => onDeactivate(row)} className="inline-flex min-h-9 items-center rounded-lg border border-stone-line bg-white px-2.5 py-1.5 text-xs font-semibold text-charcoal hover:bg-offwhite">
@@ -622,6 +658,58 @@ export default function EmployeesPage() {
               <button type="button" onClick={() => setSalaryEmp(null)} className={secondaryButtonClass}>{t("close")}</button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {resetTarget && (
+        <Modal
+          title="Reset Password"
+          onClose={() => (resetBusy ? null : setResetTarget(null))}
+        >
+          <p className="text-sm text-ink/70">
+            Set a new login password for <strong>{resetTarget.full_name}</strong> ({resetTarget.phone}).
+            Share it with them securely — it will not be shown again.
+          </p>
+          {resetDone ? (
+            <div className="mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm font-semibold text-green-700" role="status">
+              Password updated. The employee can now sign in with the new password.
+            </div>
+          ) : (
+            <form
+              className="mt-4 space-y-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void confirmReset();
+              }}
+            >
+              <div>
+                <label htmlFor="reset_password" className={labelClass}>New password</label>
+                <input
+                  id="reset_password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={resetPassword}
+                  onChange={(e) => setResetPassword(e.target.value)}
+                  placeholder="Min 8 chars, letter + number"
+                  className={inputClass}
+                />
+              </div>
+              {resetError && <p className="text-sm text-red-600" role="alert">{resetError}</p>}
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setResetTarget(null)} disabled={resetBusy} className={secondaryButtonClass}>
+                  Cancel
+                </button>
+                <button type="submit" data-requires-auth disabled={resetBusy} className={goldButtonClass}>
+                  <KeyRound className="h-4 w-4" /> {resetBusy ? "Saving…" : "Reset password"}
+                </button>
+              </div>
+            </form>
+          )}
+          {resetDone && (
+            <div className="mt-4 flex justify-end">
+              <button type="button" onClick={() => setResetTarget(null)} className={secondaryButtonClass}>Done</button>
+            </div>
+          )}
         </Modal>
       )}
 

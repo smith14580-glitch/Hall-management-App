@@ -879,6 +879,14 @@ export async function updateEmployee(id: string, body: Record<string, unknown>):
   return apiFetch<Employee>(`/employees/${id}`, { method: "PATCH", body });
 }
 
+export async function resetEmployeePassword(id: string, newPassword: string): Promise<void> {
+  requireLogin();
+  await apiFetch(`/employees/${id}/reset-password`, {
+    method: "POST",
+    body: { new_password: newPassword },
+  });
+}
+
 export async function deactivateEmployee(id: string): Promise<void> {
   requireLogin();
   if (demoActive()) return sample(undefined);
